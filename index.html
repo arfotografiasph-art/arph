@@ -3,36 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galería de Selección Fotográfica</title>
+    <title>Estudio Fotográfico AR</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- JSZip para compresión masiva en un archivo ZIP -->
+    <!-- JSZip para compresión masiva -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        
+        /* Marca de agua para el cliente */
+        .watermark-overlay::after {
+            content: "AR FOTOGRAFÍAS";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: clamp(2rem, 8vw, 5rem);
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.25);
+            text-shadow: 0 0 15px rgba(0,0,0,0.7);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            z-index: 20;
+        }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col custom-scrollbar">
 
+    <!-- PANTALLA DE LOGIN -->
+    <div id="pantalla-login" class="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl max-w-md w-full space-y-6 shadow-2xl">
+            <div class="text-center space-y-3">
+                <div class="bg-white p-3 rounded-2xl w-32 h-32 mx-auto flex items-center justify-center shadow-lg">
+                    <img src="WhatsApp Image 2026-09-01 at 16.47.19.jpeg" alt="Logo AR Fotografías" class="max-h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wider uppercase text-white">Estudio Fotográfico AR</h1>
+                    <p class="text-xs text-neutral-400 mt-1">Ingresa tus credenciales para acceder</p>
+                </div>
+            </div>
+            
+            <form id="form-login" onsubmit="iniciarSesion(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-neutral-400 mb-1">Usuario</label>
+                    <input type="text" id="login-user" required class="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-neutral-400 mb-1">Contraseña</label>
+                    <input type="password" id="login-pass" required class="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm focus:border-amber-500 focus:outline-none">
+                </div>
+                <p id="login-error" class="text-xs text-rose-500 hidden text-center">Usuario o contraseña incorrectos</p>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-lg transition text-sm cursor-pointer">
+                    Iniciar Sesión
+                </button>
+            </form>
+            <div class="text-center border-t border-neutral-800 pt-4">
+                <p class="text-xs text-neutral-500">Credenciales Admin: <strong class="text-neutral-300">admin / admin123</strong></p>
+            </div>
+        </div>
+    </div>
+
     <!-- CABECERA PRINCIPAL -->
-    <header class="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div>   
-            <h1 class="text-xl font-bold tracking-wider uppercase text-white">Estudio Fotográfico</h1>
-            <p class="text-xs text-neutral-400">Entrega de Proyectos</p>
+    <header id="app-header" class="hidden border-b border-neutral-800 bg-neutral-900/50 backdrop-blur sticky top-0 z-40 px-6 py-3 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-white p-1 rounded-lg w-10 h-10 flex items-center justify-center shrink-0">
+                <img src="WhatsApp Image 2026-09-01 at 16.47.19.jpeg" alt="Logo AR" class="max-h-full object-contain">
+            </div>
+            <div>   
+                <h1 class="text-lg font-bold tracking-wider uppercase text-white leading-tight">Estudio Fotográfico AR</h1>
+                <p id="user-badge" class="text-xs text-amber-400 font-medium"></p>
+            </div>
         </div>
         
-        <!-- Controles y Navegación -->
         <div class="flex flex-wrap items-center gap-3">
             <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
             
-            <button onclick="document.getElementById('global-file-input').click()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-4 py-2 rounded-lg transition text-sm flex items-center gap-2 cursor-pointer shadow-md">
-                <span>⬆️</span> Subir Fotos a GitHub
-            </button>
-
-            <button onclick="configurarGithub()" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 p-2 rounded-lg transition text-sm cursor-pointer" title="Configurar GitHub Token">
-                ⚙️
+            <button id="btn-cargar-fotos" onclick="intentarCargarArchivos()" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 font-medium px-4 py-2 rounded-lg transition text-sm flex items-center gap-2 cursor-pointer">
+                <span>📁</span> Cargar Más Fotos
             </button>
 
             <nav class="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800">
@@ -44,38 +94,51 @@
                     <span id="contador-aprobadas" class="bg-neutral-800 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
                 </button>
             </nav>
+
+            <button onclick="cerrarSesion()" class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer">
+                Cerrar Sesión
+            </button>
         </div>
     </header>
 
-    <!-- ESTADO DE CARGA / MENSAJES -->
-    <div id="status-bar" class="hidden bg-amber-500/10 border-b border-amber-500/20 text-amber-400 px-6 py-2 text-xs font-mono text-center">
-        Cargando fotos...
-    </div>
-
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+    <main id="app-main" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
         
         <!-- SECCIÓN: VISTA DEL CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
-            <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Se inyecta dinámicamente -->
-            </div>
+            <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
             
-            <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2">
+            <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2 hidden">
                 <p class="text-xl font-medium">La galería aún no contiene imágenes.</p>
-                <p class="text-sm text-neutral-600">Haz clic en "Subir Fotos a GitHub" para guardarlas en la carpeta del repositorio.</p>
+                <p class="text-sm text-neutral-600">Asegúrate de haber agregado imágenes en la carpeta "fotos/".</p>
             </div>
         </section>
 
         <!-- SECCIÓN: PANEL PRIVADO DEL FOTÓGRAFO -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
             
+            <!-- GESTIÓN DE USUARIOS -->
+            <div id="bloque-crear-usuarios" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-amber-400">Crear Usuarios para Clientes</h2>
+                <form id="form-crear-usuario" onsubmit="crearUsuarioCliente(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="nuevo-user" placeholder="Nombre de usuario" required class="bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm disabled:opacity-50">
+                    <input type="password" id="nuevo-pass" placeholder="Contraseña" required class="bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm disabled:opacity-50">
+                    <button type="submit" id="btn-crear-user" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold py-2.5 rounded-lg text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        Registrar Cliente
+                    </button>
+                </form>
+
+                <div class="pt-2">
+                    <p class="text-xs text-neutral-400 mb-2 font-medium">Usuarios Clientes Creados:</p>
+                    <div id="lista-usuarios" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
             <!-- ZONA DRAG & DROP -->
-            <div class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer" id="drop-zone">
+            <div id="drop-zone" class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
-                    <p class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí para guardarlas</p>
-                    <p class="text-xs text-neutral-500">Se subirán directamente a tu carpeta "fotos/" de GitHub</p>
+                    <p id="drop-zone-text" class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí</p>
                 </div>
             </div>
 
@@ -83,16 +146,14 @@
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
-                    <p class="text-sm text-neutral-400 mt-1">Aquí se filtran automáticamente las fotos elegidas.</p>
+                    <p class="text-sm text-neutral-400 mt-1">Fotos seleccionadas en tiempo real.</p>
                 </div>
-                <button id="btn-descarga-zip" onclick="descargarTodoComoZip()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-5 py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <button id="btn-descarga-zip" onclick="descargarTodoComoZip()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-5 py-2.5 rounded-xl transition text-sm shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                     Descargar Aprobadas (.ZIP)
                 </button>
             </div>
 
-            <div id="galeria-fotografo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Se inyecta dinámicamente -->
-            </div>
+            <div id="galeria-fotografo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
             
             <div id="fotografo-vacio" class="text-center py-12 text-neutral-600">
                 <p class="text-sm">Tu cliente aún no ha marcado ninguna foto como aprobada.</p>
@@ -101,74 +162,148 @@
 
     </main>
 
-    <footer class="border-t border-neutral-900 bg-neutral-950 py-6 text-center text-xs text-neutral-600">
-        &copy; 2026 Estudio Fotográfico Profesional.
-    </footer>
+    <!-- MODAL VISTA PREVIA COMPLETA -->
+    <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex items-center justify-center p-4">
+        <button onclick="cerrarModal()" class="absolute top-6 right-6 text-white text-3xl font-bold hover:text-amber-400 cursor-pointer z-30">&times;</button>
+        <div id="modal-container" class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center overflow-hidden rounded-xl">
+            <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+        </div>
+    </div>
 
     <script>
-        // CONFIGURACIÓN DE TU REPOSOTORIO (Cambia estos valores)
-        let configGH = {
-            usuario: localStorage.getItem('gh_user') || 'TU_USUARIO_GITHUB',
-            repo: localStorage.getItem('gh_repo') || 'TU_NOMBRE_REPOSITTORIO',
-            token: localStorage.getItem('gh_token') || ''
-        };
+        // LISTA DE FOTOS DENTRO DE LA CARPETA /fotos
+        // Modifica estos nombres según las fotos reales que agregues a tu carpeta
+        const fotosCarpetaRepositorio = [
+            'foto1.jpg',
+            'foto2.jpg',
+            'foto3.jpg',
+            'foto4.jpg'
+        ];
 
+        let usuarios = JSON.parse(localStorage.getItem('app_usuarios')) || [
+            { user: 'admin', pass: 'admin123', rol: 'admin' }
+        ];
+
+        let usuarioActual = null;
         let catalogoFotos = [];
 
         document.addEventListener('DOMContentLoaded', () => {
+            cargarFotosDesdeCarpeta();
             configurarCargaImagenes();
-            cargarFotosDesdeGitHub();
+            renderizarListaUsuarios();
         });
 
-        function mostrarStatus(mensaje) {
-            const bar = document.getElementById('status-bar');
-            bar.innerText = mensaje;
-            bar.classList.remove('hidden');
+        // CARGA AUTOMÁTICA DE IMÁGENES DESDE LA CARPETA /fotos
+        function cargarFotosDesdeCarpeta() {
+            fotosCarpetaRepositorio.forEach(nombreFoto => {
+                catalogoFotos.push({
+                    id: crypto.randomUUID(),
+                    nombre: nombreFoto,
+                    url: `fotos/${nombreFoto}`,
+                    estado: 'pendiente',
+                    blob: null // Se obtendrá automáticamente al descargar si se requiere
+                });
+            });
         }
 
-        function ocultarStatus() {
-            document.getElementById('status-bar').classList.add('hidden');
-        }
+        function iniciarSesion(e) {
+            e.preventDefault();
+            const userInput = document.getElementById('login-user').value.trim();
+            const passInput = document.getElementById('login-pass').value.trim();
 
-        function configurarGithub() {
-            const user = prompt("Ingresa tu usuario de GitHub:", configGH.usuario);
-            const repo = prompt("Ingresa el nombre de tu repositorio:", configGH.repo);
-            const token = prompt("Ingresa tu Fine-grained Personal Access Token de GitHub:", configGH.token);
+            const usuarioEncontrado = usuarios.find(u => u.user === userInput && u.pass === passInput);
 
-            if (user && repo && token) {
-                localStorage.setItem('gh_user', user);
-                localStorage.setItem('gh_repo', repo);
-                localStorage.setItem('gh_token', token);
-                configGH = { usuario: user, repo: repo, token: token };
-                alert("Configuración guardada correctamente.");
-                cargarFotosDesdeGitHub();
+            if (usuarioEncontrado) {
+                usuarioActual = usuarioEncontrado;
+                document.getElementById('login-error').classList.add('hidden');
+                document.getElementById('pantalla-login').classList.add('hidden');
+                document.getElementById('app-header').classList.remove('hidden');
+                document.getElementById('app-main').classList.remove('hidden');
+                
+                document.getElementById('user-badge').innerText = `Rol: ${usuarioActual.rol.toUpperCase()} (${usuarioActual.user})`;
+
+                aplicarPermisosRol();
+                cambiarVista('cliente');
+                actualizarVistas();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
             }
         }
 
-        // Carga las fotos existentes guardadas en la carpeta "fotos/" de tu repositorio
-        async function cargarFotosDesdeGitHub() {
-            if (!configGH.usuario || !configGH.repo) return;
+        function aplicarPermisosRol() {
+            const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
+            
+            const btnCargar = document.getElementById('btn-cargar-fotos');
+            if (esAdmin) {
+                btnCargar.classList.remove('hidden');
+            } else {
+                btnCargar.classList.add('hidden');
+            }
 
-            mostrarStatus("Cargando imágenes existentes desde GitHub...");
-            try {
-                const res = await fetch(`https://api.github.com/repos/${configGH.usuario}/${configGH.repo}/contents/fotos`);
-                if (!res.ok) throw new Error("No se pudo obtener la carpeta fotos");
+            document.getElementById('nuevo-user').disabled = !esAdmin;
+            document.getElementById('nuevo-pass').disabled = !esAdmin;
+            document.getElementById('btn-crear-user').disabled = !esAdmin;
 
-                const archivos = await res.json();
-                catalogoFotos = archivos
-                    .filter(a => a.type === 'file' && a.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
-                    .map(a => ({
-                        id: a.sha,
-                        nombre: a.name,
-                        url: a.download_url,
-                        estado: 'pendiente'
-                    }));
+            const dropZone = document.getElementById('drop-zone');
+            const dropText = document.getElementById('drop-zone-text');
+            if (!esAdmin) {
+                dropZone.classList.add('opacity-50', 'cursor-not-allowed');
+                dropText.innerText = "🔒 Subida deshabilitada (Solo Administrador)";
+            } else {
+                dropZone.classList.remove('opacity-50', 'cursor-not-allowed');
+                dropText.innerText = "Arrastra y suelta más fotos aquí";
+            }
+        }
 
-                actualizarVistas();
-            } catch (err) {
-                console.log("Aún no hay carpeta fotos o error al cargar:", err);
-            } finally {
-                ocultarStatus();
+        function cerrarSesion() {
+            usuarioActual = null;
+            document.getElementById('pantalla-login').classList.remove('hidden');
+            document.getElementById('app-header').classList.add('hidden');
+            document.getElementById('app-main').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+        }
+
+        function crearUsuarioCliente(e) {
+            e.preventDefault();
+            if (usuarioActual.rol !== 'admin') {
+                alert("Acción no permitida. Solo el administrador puede crear usuarios.");
+                return;
+            }
+
+            const user = document.getElementById('nuevo-user').value.trim();
+            const pass = document.getElementById('nuevo-pass').value.trim();
+
+            if (usuarios.some(u => u.user === user)) {
+                alert("El usuario ya existe");
+                return;
+            }
+
+            usuarios.push({ user, pass, rol: 'cliente' });
+            localStorage.setItem('app_usuarios', JSON.stringify(usuarios));
+            
+            document.getElementById('nuevo-user').value = '';
+            document.getElementById('nuevo-pass').value = '';
+            renderizarListaUsuarios();
+        }
+
+        function renderizarListaUsuarios() {
+            const contenedor = document.getElementById('lista-usuarios');
+            contenedor.innerHTML = '';
+            
+            usuarios.filter(u => u.rol === 'cliente').forEach(u => {
+                const badge = document.createElement('span');
+                badge.className = "bg-neutral-800 border border-neutral-700 text-xs px-2.5 py-1 rounded-full text-neutral-300 font-mono";
+                badge.innerText = `👤 ${u.user}`;
+                contenedor.appendChild(badge);
+            });
+        }
+
+        function intentarCargarArchivos() {
+            if (usuarioActual.rol === 'admin') {
+                document.getElementById('global-file-input').click();
+            } else {
+                alert("Solo el Administrador puede subir fotos.");
             }
         }
 
@@ -176,78 +311,51 @@
             const dropZone = document.getElementById('drop-zone');
             const globalFileInput = document.getElementById('global-file-input');
 
-            globalFileInput.addEventListener('change', (e) => procesarArchivos(e.target.files));
+            globalFileInput.addEventListener('change', (e) => {
+                if (usuarioActual.rol === 'admin') procesarArchivos(e.target.files);
+            });
 
-            dropZone.addEventListener('click', () => globalFileInput.click());
+            dropZone.addEventListener('click', () => {
+                if (usuarioActual.rol === 'admin') globalFileInput.click();
+            });
+
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
+                if (usuarioActual.rol === 'admin') {
+                    dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
+                }
             });
-            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-amber-500', 'bg-amber-500/5'));
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
+            });
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
-                procesarArchivos(e.dataTransfer.files);
-            });
-        }
-
-        async function procesarArchivos(archivos) {
-            if (!configGH.token) {
-                alert("Para guardar las fotos permanentemente, primero debes configurar tu Token de GitHub con el botón ⚙️.");
-                configurarGithub();
-                if (!configGH.token) return;
-            }
-
-            mostrarStatus("Subiendo imágenes a tu repositorio de GitHub...");
-
-            for (let archivo of Array.from(archivos)) {
-                if (!archivo.type.startsWith('image/')) continue;
-
-                try {
-                    const base64Content = await archivoToBase64(archivo);
-                    const cleanBase64 = base64Content.split(',')[1];
-
-                    // Subida a la API de GitHub en la carpeta fotos/
-                    const url = `https://api.github.com/repos/${configGH.usuario}/${configGH.repo}/contents/fotos/${archivo.name}`;
-                    const res = await fetch(url, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${configGH.token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            message: `Subir imagen: ${archivo.name}`,
-                            content: cleanBase64
-                        })
-                    });
-
-                    if (res.ok) {
-                        const data = await res.json();
-                        catalogoFotos.push({
-                            id: data.content.sha,
-                            nombre: archivo.name,
-                            url: data.content.download_url,
-                            estado: 'pendiente'
-                        });
-                    } else {
-                        alert(`Error al subir ${archivo.name}. Verifica los permisos del token.`);
-                    }
-                } catch (err) {
-                    console.error("Error al procesar:", err);
+                if (usuarioActual.rol === 'admin') {
+                    procesarArchivos(e.dataTransfer.files);
+                } else {
+                    alert("Solo el Administrador puede subir archivos.");
                 }
-            }
-
-            ocultarStatus();
-            actualizarVistas();
+            });
         }
 
-        function archivoToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
+        function procesarArchivos(archivos) {
+            Array.from(archivos).forEach(archivo => {
+                if (!archivo.type.startsWith('image/')) return;
+
+                const nuevaFoto = {
+                    id: crypto.randomUUID(),
+                    nombre: archivo.name,
+                    url: URL.createObjectURL(archivo),
+                    estado: 'pendiente',
+                    blob: archivo
+                };
+                catalogoFotos.push(nuevaFoto);
             });
+
+            actualizarVistas();
         }
 
         function actualizarVistas() {
@@ -275,17 +383,20 @@
 
                 if (foto.estado === 'aprobada') {
                     bordeColor = 'border-emerald-500 bg-emerald-950/20';
-                    tagEstado = `<span class="absolute top-3 left-3 bg-emerald-500 text-neutral-950 text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider">✓ Aprobada</span>`;
+                    tagEstado = `<span class="absolute top-3 left-3 bg-emerald-500 text-neutral-950 text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider z-10">✓ Aprobada</span>`;
                 } else if (foto.estado === 'rechazada') {
                     bordeColor = 'border-rose-500 bg-rose-950/20';
-                    tagEstado = `<span class="absolute top-3 left-3 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider">✕ Rechazada</span>`;
+                    tagEstado = `<span class="absolute top-3 left-3 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider z-10">✕ Rechazada</span>`;
                 }
+
+                const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
+                const watermarkClass = esCliente ? 'watermark-overlay' : '';
 
                 const tarjeta = document.createElement('div');
                 tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
                 tarjeta.innerHTML = `
-                    <div class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center">
-                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
+                    <div onclick="abrirModal('${foto.url}')" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer ${watermarkClass}">
+                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" onerror="this.src='https://via.placeholder.com/400?text=Foto+No+Encontrada'">
                         ${tagEstado}
                     </div>
                     <div class="p-4 flex-1 flex flex-col justify-between gap-3">
@@ -333,18 +444,39 @@
                 const tarjeta = document.createElement('div');
                 tarjeta.className = "border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between";
                 tarjeta.innerHTML = `
-                    <div class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center">
+                    <div onclick="abrirModal('${foto.url}')" class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center cursor-pointer">
                         <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full">
                     </div>
                     <div class="p-4 space-y-3">
                         <p class="text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
-                        <a href="${foto.url}" target="_blank" download="${foto.nombre}" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
+                        <a href="${foto.url}" download="${foto.nombre}" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
                             Descargar Foto
                         </a>
                     </div>
                 `;
                 contenedor.appendChild(tarjeta);
             });
+        }
+
+        function abrirModal(url) {
+            const modal = document.getElementById('modal-preview');
+            const container = document.getElementById('modal-container');
+            const img = document.getElementById('modal-img');
+            
+            img.src = url;
+
+            const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
+            if (esCliente) {
+                container.classList.add('watermark-overlay');
+            } else {
+                container.classList.remove('watermark-overlay');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-preview').classList.add('hidden');
         }
 
         async function descargarTodoComoZip() {
@@ -358,10 +490,19 @@
 
             const zip = new JSZip();
 
-            for (let foto of aprobadas) {
-                const res = await fetch(foto.url);
-                const blob = await res.blob();
-                zip.file(foto.nombre, blob);
+            for (const foto of aprobadas) {
+                if (foto.blob) {
+                    zip.file(foto.nombre, foto.blob);
+                } else {
+                    // Para imágenes en /fotos, obtenemos su contenido via fetch
+                    try {
+                        const response = await fetch(foto.url);
+                        const blobData = await response.blob();
+                        zip.file(foto.nombre, blobData);
+                    } catch (err) {
+                        console.error(`Error al obtener ${foto.nombre}:`, err);
+                    }
+                }
             }
 
             zip.generateAsync({ type: "blob" }).then((content) => {
