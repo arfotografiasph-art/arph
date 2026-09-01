@@ -6,14 +6,13 @@
     <title>Estudio Fotográfico AR</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- JSZip para compresión masiva -->
+    <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
         
-        /* Marca de agua translúcida */
         .watermark-overlay::after {
             content: "AR FOTOGRAFÍAS";
             position: absolute;
@@ -22,7 +21,7 @@
             transform: translate(-50%, -50%) rotate(-30deg);
             font-size: clamp(2rem, 8vw, 5rem);
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.10); /* Opacidad reducida */
+            color: rgba(255, 255, 255, 0.10);
             text-shadow: 0 0 10px rgba(0,0,0,0.3);
             pointer-events: none;
             user-select: none;
@@ -33,7 +32,7 @@
 </head>
 <body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col custom-scrollbar">
 
-    <!-- PANTALLA DE LOGIN -->
+    <!-- LOGIN -->
     <div id="pantalla-login" class="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center p-4">
         <div class="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl max-w-md w-full space-y-6 shadow-2xl">
             <div class="text-center space-y-3">
@@ -66,7 +65,7 @@
         </div>
     </div>
 
-    <!-- CABECERA PRINCIPAL -->
+    <!-- CABECERA -->
     <header id="app-header" class="hidden border-b border-neutral-800 bg-neutral-900/50 backdrop-blur sticky top-0 z-40 px-6 py-3 flex flex-wrap justify-between items-center gap-4">
         <div class="flex items-center gap-3">
             <div class="bg-white p-1 rounded-lg w-10 h-10 flex items-center justify-center shrink-0">
@@ -101,13 +100,12 @@
         </div>
     </header>
 
-    <!-- CONTENIDO PRINCIPAL -->
+    <!-- CONTENIDO -->
     <main id="app-main" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
         <section id="seccion-cliente" class="space-y-6">
             <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
             <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2 hidden">
                 <p class="text-xl font-medium">La galería aún no contiene imágenes.</p>
-                <p class="text-sm text-neutral-600">Asegúrate de agregar fotos en la carpeta "fotos/" de tu repositorio.</p>
             </div>
         </section>
 
@@ -151,7 +149,7 @@
         </section>
     </main>
 
-    <!-- MODAL VISTA PREVIA -->
+    <!-- MODAL PREVIEW -->
     <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex items-center justify-center p-4">
         <button onclick="cerrarModal()" class="absolute top-6 right-6 text-white text-3xl font-bold hover:text-amber-400 cursor-pointer z-30">&times;</button>
         <div id="modal-container" class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center overflow-hidden rounded-xl">
@@ -160,46 +158,126 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN API GITHUB
+        const GITHUB_TOKEN = "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"; 
         const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
+        const FILE_DATOS = 'datos.json';
 
-        let usuarios = JSON.parse(localStorage.getItem('app_usuarios')) || [
-            { user: 'admin', pass: 'admin123', rol: 'admin' }
-        ];
-
+        let usuarios = [{ user: 'admin', pass: 'admin123', rol: 'admin' }];
         let usuarioActual = null;
         let catalogoFotos = [];
+        let datosSha = null; // Requerido por GitHub para actualizar archivos
 
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarFotosAutomaticasGitHub();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarDatosDesdeGitHub();
+            await cargarFotosAutomaticasGitHub();
             configurarCargaImagenes();
-            renderizarListaUsuarios();
         });
+
+        // LEER DATOS DESDE GITHUB (datos.json)
+        async function cargarDatosDesdeGitHub() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, {
+                    headers: GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {}
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    datosSha = data.sha;
+                    
+                    // Decodificar Base64 de la API de GitHub
+                    const contenidoTexto = decodeURIComponent(escape(atob(data.content)));
+                    const datosGuardados = JSON.parse(contenidoTexto);
+                    
+                    if (datosGuardados.usuarios) usuarios = datosGuardados.usuarios;
+                    if (datosGuardados.estadosFotos) {
+                        catalogoFotos.forEach(foto => {
+                            if (datosGuardados.estadosFotos[foto.id]) {
+                                foto.estado = datosGuardados.estadosFotos[foto.id];
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.warn("No se encontró datos.json previamente creado o hubo error de red.", error);
+            }
+            renderizarListaUsuarios();
+        }
+
+        // GUARDAR DATOS EN GITHUB (datos.json)
+        async function guardarDatosEnGitHub() {
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+                console.warn("Agrega un Token de GitHub para habilitar guardado remoto permanente.");
+                return;
+            }
+
+            const estadosFotosMap = {};
+            catalogoFotos.forEach(f => estadosFotosMap[f.id] = f.estado);
+
+            const contenidoJSON = JSON.stringify({
+                usuarios: usuarios,
+                estadosFotos: estadosFotosMap
+            }, null, 2);
+
+            // Convertir a Base64 con soporte de caracteres UTF-8
+            const contenidoBase64 = btoa(unescape(encodeURIComponent(contenidoJSON)));
+
+            try {
+                const body = {
+                    message: "Actualización de usuarios/votos",
+                    content: contenidoBase64,
+                    ...(datosSha && { sha: datosSha })
+                };
+
+                const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    datosSha = result.content.sha;
+                    console.log("Sincronización exitosa en GitHub.");
+                } else {
+                    console.error("Error al escribir en GitHub:", await res.json());
+                }
+            } catch (error) {
+                console.error("Error de comunicación con API de GitHub:", error);
+            }
+        }
 
         async function cargarFotosAutomaticasGitHub() {
             const urlApi = `https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/fotos`;
 
             try {
                 const res = await fetch(urlApi);
-                if (!res.ok) throw new Error("No se pudo obtener el contenido de la carpeta 'fotos'");
+                if (!res.ok) return;
 
                 const archivos = await res.json();
                 
                 archivos.forEach(archivo => {
                     if (archivo.type === 'file' && /\.(jpg|jpeg|png|gif|webp)$/i.test(archivo.name)) {
-                        catalogoFotos.push({
-                            id: crypto.randomUUID(),
-                            nombre: archivo.name,
-                            url: archivo.download_url,
-                            estado: 'pendiente',
-                            blob: null
-                        });
+                        const fotoId = archivo.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        
+                        if (!catalogoFotos.some(f => f.id === fotoId)) {
+                            catalogoFotos.push({
+                                id: fotoId,
+                                nombre: archivo.name,
+                                url: archivo.download_url,
+                                estado: 'pendiente'
+                            });
+                        }
                     }
                 });
 
                 actualizarVistas();
             } catch (error) {
-                console.warn("Aviso: No se cargaron imágenes automáticas desde GitHub.", error);
+                console.warn("Aviso:", error);
             }
         }
 
@@ -230,13 +308,7 @@
         function aplicarPermisosRol() {
             const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
             
-            const btnCargar = document.getElementById('btn-cargar-fotos');
-            if (esAdmin) {
-                btnCargar.classList.remove('hidden');
-            } else {
-                btnCargar.classList.add('hidden');
-            }
-
+            document.getElementById('btn-cargar-fotos').classList.toggle('hidden', !esAdmin);
             document.getElementById('nuevo-user').disabled = !esAdmin;
             document.getElementById('nuevo-pass').disabled = !esAdmin;
             document.getElementById('btn-crear-user').disabled = !esAdmin;
@@ -257,16 +329,11 @@
             document.getElementById('pantalla-login').classList.remove('hidden');
             document.getElementById('app-header').classList.add('hidden');
             document.getElementById('app-main').classList.add('hidden');
-            document.getElementById('login-user').value = '';
-            document.getElementById('login-pass').value = '';
         }
 
-        function crearUsuarioCliente(e) {
+        async function crearUsuarioCliente(e) {
             e.preventDefault();
-            if (usuarioActual.rol !== 'admin') {
-                alert("Acción no permitida. Solo el administrador puede crear usuarios.");
-                return;
-            }
+            if (usuarioActual.rol !== 'admin') return;
 
             const user = document.getElementById('nuevo-user').value.trim();
             const pass = document.getElementById('nuevo-pass').value.trim();
@@ -277,90 +344,51 @@
             }
 
             usuarios.push({ user, pass, rol: 'cliente' });
-            localStorage.setItem('app_usuarios', JSON.stringify(usuarios));
             
             document.getElementById('nuevo-user').value = '';
             document.getElementById('nuevo-pass').value = '';
+            
             renderizarListaUsuarios();
+            await guardarDatosEnGitHub();
+        }
+
+        async function eliminarUsuario(nombreUsuario) {
+            if (confirm(`¿Eliminar al cliente "${nombreUsuario}"?`)) {
+                usuarios = usuarios.filter(u => u.user !== nombreUsuario);
+                renderizarListaUsuarios();
+                await guardarDatosEnGitHub();
+            }
         }
 
         function renderizarListaUsuarios() {
             const contenedor = document.getElementById('lista-usuarios');
             contenedor.innerHTML = '';
-            
+            const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
+
             usuarios.filter(u => u.rol === 'cliente').forEach(u => {
-                const badge = document.createElement('span');
-                badge.className = "bg-neutral-800 border border-neutral-700 text-xs px-2.5 py-1 rounded-full text-neutral-300 font-mono";
-                badge.innerText = `👤 ${u.user}`;
+                const badge = document.createElement('div');
+                badge.className = "bg-neutral-800 border border-neutral-700 text-xs pl-3 pr-1 py-1 rounded-full text-neutral-300 font-mono flex items-center gap-2";
+                badge.innerHTML = `
+                    <span>👤 ${u.user}</span>
+                    ${esAdmin ? `<button onclick="eliminarUsuario('${u.user}')" class="hover:bg-rose-900/50 text-rose-400 rounded-full w-5 h-5 flex items-center justify-center font-bold cursor-pointer">&times;</button>` : ''}
+                `;
                 contenedor.appendChild(badge);
             });
         }
 
-        function intentarCargarArchivos() {
-            if (usuarioActual.rol === 'admin') {
-                document.getElementById('global-file-input').click();
-            } else {
-                alert("Solo el Administrador puede subir fotos.");
-            }
-        }
+        async function votarFoto(id, decision) {
+            const foto = catalogoFotos.find(f => f.id === id);
+            if (!foto) return;
 
-        function configurarCargaImagenes() {
-            const dropZone = document.getElementById('drop-zone');
-            const globalFileInput = document.getElementById('global-file-input');
-
-            globalFileInput.addEventListener('change', (e) => {
-                if (usuarioActual.rol === 'admin') procesarArchivos(e.target.files);
-            });
-
-            dropZone.addEventListener('click', () => {
-                if (usuarioActual.rol === 'admin') globalFileInput.click();
-            });
-
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                if (usuarioActual.rol === 'admin') {
-                    dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
-                }
-            });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
-                if (usuarioActual.rol === 'admin') {
-                    procesarArchivos(e.dataTransfer.files);
-                } else {
-                    alert("Solo el Administrador puede subir archivos.");
-                }
-            });
-        }
-
-        function procesarArchivos(archivos) {
-            Array.from(archivos).forEach(archivo => {
-                if (!archivo.type.startsWith('image/')) return;
-
-                const nuevaFoto = {
-                    id: crypto.randomUUID(),
-                    nombre: archivo.name,
-                    url: URL.createObjectURL(archivo),
-                    estado: 'pendiente',
-                    blob: archivo
-                };
-                catalogoFotos.push(nuevaFoto);
-            });
-
+            foto.estado = (foto.estado === decision) ? 'pendiente' : decision;
             actualizarVistas();
+            await guardarDatosEnGitHub();
         }
 
         function actualizarVistas() {
             renderizarGaleriaCliente();
             renderizarPanelFotografo();
-            
-            const aprobadasCount = catalogoFotos.filter(f => f.estado === 'aprobada').length;
-            document.getElementById('contador-aprobadas').innerText = aprobadasCount;
+            document.getElementById('contador-aprobadas').innerText = catalogoFotos.filter(f => f.estado === 'aprobada').length;
         }
 
         function renderizarGaleriaCliente() {
@@ -380,10 +408,10 @@
 
                 if (foto.estado === 'aprobada') {
                     bordeColor = 'border-emerald-500 bg-emerald-950/20';
-                    tagEstado = `<span class="absolute top-3 left-3 bg-emerald-500 text-neutral-950 text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider z-10">✓ Aprobada</span>`;
+                    tagEstado = `<span class="absolute top-3 left-3 bg-emerald-500 text-neutral-950 text-xs font-bold px-2 py-1 rounded shadow-md uppercase z-10">✓ Aprobada</span>`;
                 } else if (foto.estado === 'rechazada') {
                     bordeColor = 'border-rose-500 bg-rose-950/20';
-                    tagEstado = `<span class="absolute top-3 left-3 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider z-10">✕ Rechazada</span>`;
+                    tagEstado = `<span class="absolute top-3 left-3 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md uppercase z-10">✕ Rechazada</span>`;
                 }
 
                 const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
@@ -397,27 +425,15 @@
                         ${tagEstado}
                     </div>
                     <div class="p-4 flex-1 flex flex-col justify-between gap-3">
-                        <p class="text-xs text-neutral-400 truncate font-mono" title="${foto.nombre}">${foto.nombre}</p>
+                        <p class="text-xs text-neutral-400 truncate font-mono">${foto.nombre}</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="votarFoto('${foto.id}', 'aprobada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold tracking-wide transition border ${foto.estado === 'aprobada' ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'border-neutral-700 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-400'}">
-                                Aprobar
-                            </button>
-                            <button onclick="votarFoto('${foto.id}', 'rechazada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold tracking-wide transition border ${foto.estado === 'rechazada' ? 'bg-rose-500 text-white border-rose-500' : 'border-neutral-700 hover:border-rose-500 hover:bg-rose-500/10 text-rose-400'}">
-                                Rechazar
-                            </button>
+                            <button onclick="votarFoto('${foto.id}', 'aprobada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold border ${foto.estado === 'aprobada' ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'border-neutral-700 hover:border-emerald-500 text-emerald-400'}">Aprobar</button>
+                            <button onclick="votarFoto('${foto.id}', 'rechazada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold border ${foto.estado === 'rechazada' ? 'bg-rose-500 text-white border-rose-500' : 'border-neutral-700 hover:border-rose-500 text-rose-400'}">Rechazar</button>
                         </div>
                     </div>
                 `;
                 contenedor.appendChild(tarjeta);
             });
-        }
-
-        function votarFoto(id, decision) {
-            const foto = catalogoFotos.find(f => f.id === id);
-            if (!foto) return;
-
-            foto.estado = (foto.estado === decision) ? 'pendiente' : decision;
-            actualizarVistas();
         }
 
         function renderizarPanelFotografo() {
@@ -446,9 +462,7 @@
                     </div>
                     <div class="p-4 space-y-3">
                         <p class="text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
-                        <a href="${foto.url}" download="${foto.nombre}" target="_blank" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
-                            Descargar Foto
-                        </a>
+                        <a href="${foto.url}" download="${foto.nombre}" target="_blank" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs border border-neutral-700">Descargar Foto</a>
                     </div>
                 `;
                 contenedor.appendChild(tarjeta);
@@ -458,17 +472,13 @@
         function abrirModal(url) {
             const modal = document.getElementById('modal-preview');
             const container = document.getElementById('modal-container');
-            const img = document.getElementById('modal-img');
-            
-            img.src = url;
+            document.getElementById('modal-img').src = url;
 
-            const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
-            if (esCliente) {
+            if (usuarioActual && usuarioActual.rol === 'cliente') {
                 container.classList.add('watermark-overlay');
             } else {
                 container.classList.remove('watermark-overlay');
             }
-
             modal.classList.remove('hidden');
         }
 
@@ -481,23 +491,17 @@
             if (aprobadas.length === 0) return;
 
             const btnZip = document.getElementById('btn-descarga-zip');
-            const textoOriginal = btnZip.innerText;
             btnZip.innerText = "Empaquetando...";
             btnZip.disabled = true;
 
             const zip = new JSZip();
-
             for (const foto of aprobadas) {
-                if (foto.blob) {
-                    zip.file(foto.nombre, foto.blob);
-                } else {
-                    try {
-                        const response = await fetch(foto.url);
-                        const blobData = await response.blob();
-                        zip.file(foto.nombre, blobData);
-                    } catch (err) {
-                        console.error(`Error al obtener ${foto.nombre}:`, err);
-                    }
+                try {
+                    const response = await fetch(foto.url);
+                    const blobData = await response.blob();
+                    zip.file(foto.nombre, blobData);
+                } catch (err) {
+                    console.error(err);
                 }
             }
 
@@ -505,11 +509,8 @@
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(content);
                 link.download = "fotos_aprobadas.zip";
-                document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
-                
-                btnZip.innerText = textoOriginal;
+                btnZip.innerText = "Descargar Aprobadas (.ZIP)";
                 btnZip.disabled = false;
             });
         }
@@ -531,6 +532,37 @@
                 secCliente.classList.add('hidden');
                 secFotografo.classList.remove('hidden');
             }
+        }
+
+        function intentarCargarArchivos() {
+            if (usuarioActual.rol === 'admin') document.getElementById('global-file-input').click();
+        }
+
+        function configurarCargaImagenes() {
+            const dropZone = document.getElementById('drop-zone');
+            const globalFileInput = document.getElementById('global-file-input');
+
+            globalFileInput.addEventListener('change', (e) => {
+                if (usuarioActual.rol === 'admin') procesarArchivosLocales(e.target.files);
+            });
+
+            dropZone.addEventListener('click', () => {
+                if (usuarioActual.rol === 'admin') globalFileInput.click();
+            });
+        }
+
+        function procesarArchivosLocales(archivos) {
+            Array.from(archivos).forEach(archivo => {
+                if (!archivo.type.startsWith('image/')) return;
+                const fotoId = archivo.name.replace(/[^a-zA-Z0-9]/g, '_');
+                catalogoFotos.push({
+                    id: fotoId,
+                    nombre: archivo.name,
+                    url: URL.createObjectURL(archivo),
+                    estado: 'pendiente'
+                });
+            });
+            actualizarVistas();
         }
     </script>
 </body>
