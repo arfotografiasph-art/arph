@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galería de Selección Fotográfica</title>
-    <!-- Tailwind CSS para diseño moderno y oscuro -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- JSZip para compresión masiva en un archivo ZIP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -18,19 +18,21 @@
 
     <!-- CABECERA PRINCIPAL -->
     <header class="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div>
+        <div>   
             <h1 class="text-xl font-bold tracking-wider uppercase text-white">Estudio Fotográfico</h1>
             <p class="text-xs text-neutral-400">Entrega de Proyectos</p>
         </div>
         
-        <!-- Pestañas de Navegación y Botón de Carga Directa -->
+        <!-- Controles y Navegación -->
         <div class="flex flex-wrap items-center gap-3">
-            <!-- Selector de archivos oculto global -->
             <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
             
-            <!-- Botón directo para subir fotos -->
-            <button onclick="document.getElementById('global-file-input').click()" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-amber-400 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 cursor-pointer shadow-md">
-                <span>☁️</span> Subir Fotos
+            <button onclick="document.getElementById('global-file-input').click()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-4 py-2 rounded-lg transition text-sm flex items-center gap-2 cursor-pointer shadow-md">
+                <span>⬆️</span> Subir Fotos a GitHub
+            </button>
+
+            <button onclick="configurarGithub()" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 p-2 rounded-lg transition text-sm cursor-pointer" title="Configurar GitHub Token">
+                ⚙️
             </button>
 
             <nav class="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800">
@@ -45,32 +47,35 @@
         </div>
     </header>
 
+    <!-- ESTADO DE CARGA / MENSAJES -->
+    <div id="status-bar" class="hidden bg-amber-500/10 border-b border-amber-500/20 text-amber-400 px-6 py-2 text-xs font-mono text-center">
+        Cargando fotos...
+    </div>
+
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
         
         <!-- SECCIÓN: VISTA DEL CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
-            <!-- Grilla de Fotos del Cliente -->
             <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <!-- Se inyecta dinámicamente -->
             </div>
             
-            <!-- Vista vacía del cliente -->
             <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2">
                 <p class="text-xl font-medium">La galería aún no contiene imágenes.</p>
-                <p class="text-sm text-neutral-600">Usa el botón "Subir Fotos" o ve al panel privado para cargar el contenido.</p>
+                <p class="text-sm text-neutral-600">Haz clic en "Subir Fotos a GitHub" para guardarlas en la carpeta del repositorio.</p>
             </div>
         </section>
 
         <!-- SECCIÓN: PANEL PRIVADO DEL FOTÓGRAFO -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
             
-            <!-- ZONA DE CARGA ADICIONAL (DRAG & DROP) -->
+            <!-- ZONA DRAG & DROP -->
             <div class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer" id="drop-zone">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
-                    <p class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí</p>
-                    <p class="text-xs text-neutral-500">o usa el botón de subida en la barra superior</p>
+                    <p class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí para guardarlas</p>
+                    <p class="text-xs text-neutral-500">Se subirán directamente a tu carpeta "fotos/" de GitHub</p>
                 </div>
             </div>
 
@@ -78,19 +83,17 @@
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
-                    <p class="text-sm text-neutral-400 mt-1">Aquí se filtran automáticamente las fotos elegidas en tiempo real.</p>
+                    <p class="text-sm text-neutral-400 mt-1">Aquí se filtran automáticamente las fotos elegidas.</p>
                 </div>
                 <button id="btn-descarga-zip" onclick="descargarTodoComoZip()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-5 py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    Descargar Todas las Aprobadas (ZIP)
+                    Descargar Aprobadas (.ZIP)
                 </button>
             </div>
 
-            <!-- Grilla de Fotos Aprobadas para el Fotógrafo -->
             <div id="galeria-fotografo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <!-- Se inyecta dinámicamente -->
             </div>
             
-            <!-- Vista vacía del fotógrafo para aprobaciones -->
             <div id="fotografo-vacio" class="text-center py-12 text-neutral-600">
                 <p class="text-sm">Tu cliente aún no ha marcado ninguna foto como aprobada.</p>
             </div>
@@ -98,42 +101,89 @@
 
     </main>
 
-    <!-- PIE DE PÁGINA -->
     <footer class="border-t border-neutral-900 bg-neutral-950 py-6 text-center text-xs text-neutral-600">
         &copy; 2026 Estudio Fotográfico Profesional.
     </footer>
 
-    <!-- LÓGICA INTERNA DE LA APLICACIÓN -->
     <script>
+        // CONFIGURACIÓN DE TU REPOSOTORIO (Cambia estos valores)
+        let configGH = {
+            usuario: localStorage.getItem('gh_user') || 'TU_USUARIO_GITHUB',
+            repo: localStorage.getItem('gh_repo') || 'TU_NOMBRE_REPOSITTORIO',
+            token: localStorage.getItem('gh_token') || ''
+        };
+
         let catalogoFotos = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             configurarCargaImagenes();
-            actualizarVistas();
+            cargarFotosDesdeGitHub();
         });
 
-        // Configuración de los métodos de carga (Botón y Arrastre)
+        function mostrarStatus(mensaje) {
+            const bar = document.getElementById('status-bar');
+            bar.innerText = mensaje;
+            bar.classList.remove('hidden');
+        }
+
+        function ocultarStatus() {
+            document.getElementById('status-bar').classList.add('hidden');
+        }
+
+        function configurarGithub() {
+            const user = prompt("Ingresa tu usuario de GitHub:", configGH.usuario);
+            const repo = prompt("Ingresa el nombre de tu repositorio:", configGH.repo);
+            const token = prompt("Ingresa tu Fine-grained Personal Access Token de GitHub:", configGH.token);
+
+            if (user && repo && token) {
+                localStorage.setItem('gh_user', user);
+                localStorage.setItem('gh_repo', repo);
+                localStorage.setItem('gh_token', token);
+                configGH = { usuario: user, repo: repo, token: token };
+                alert("Configuración guardada correctamente.");
+                cargarFotosDesdeGitHub();
+            }
+        }
+
+        // Carga las fotos existentes guardadas en la carpeta "fotos/" de tu repositorio
+        async function cargarFotosDesdeGitHub() {
+            if (!configGH.usuario || !configGH.repo) return;
+
+            mostrarStatus("Cargando imágenes existentes desde GitHub...");
+            try {
+                const res = await fetch(`https://api.github.com/repos/${configGH.usuario}/${configGH.repo}/contents/fotos`);
+                if (!res.ok) throw new Error("No se pudo obtener la carpeta fotos");
+
+                const archivos = await res.json();
+                catalogoFotos = archivos
+                    .filter(a => a.type === 'file' && a.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+                    .map(a => ({
+                        id: a.sha,
+                        nombre: a.name,
+                        url: a.download_url,
+                        estado: 'pendiente'
+                    }));
+
+                actualizarVistas();
+            } catch (err) {
+                console.log("Aún no hay carpeta fotos o error al cargar:", err);
+            } finally {
+                ocultarStatus();
+            }
+        }
+
         function configurarCargaImagenes() {
             const dropZone = document.getElementById('drop-zone');
             const globalFileInput = document.getElementById('global-file-input');
 
-            // Evento para el botón del menú superior
-            globalFileInput.addEventListener('change', (e) => {
-                procesarArchivos(e.target.files);
-            });
+            globalFileInput.addEventListener('change', (e) => procesarArchivos(e.target.files));
 
-            // Eventos para la zona de arrastre del panel
             dropZone.addEventListener('click', () => globalFileInput.click());
-            
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
             });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
-            });
-
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-amber-500', 'bg-amber-500/5'));
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
@@ -141,22 +191,63 @@
             });
         }
 
-        // Convierte los archivos en recursos visuales internos
-        function procesarArchivos(archivos) {
-            Array.from(archivos).forEach(archivo => {
-                if (!archivo.type.startsWith('image/')) return;
+        async function procesarArchivos(archivos) {
+            if (!configGH.token) {
+                alert("Para guardar las fotos permanentemente, primero debes configurar tu Token de GitHub con el botón ⚙️.");
+                configurarGithub();
+                if (!configGH.token) return;
+            }
 
-                const nuevaFoto = {
-                    id: crypto.randomUUID(),
-                    nombre: archivo.name,
-                    url: URL.createObjectURL(archivo),
-                    estado: 'pendiente',
-                    blob: archivo
-                };
-                catalogoFotos.push(nuevaFoto);
-            });
+            mostrarStatus("Subiendo imágenes a tu repositorio de GitHub...");
 
+            for (let archivo of Array.from(archivos)) {
+                if (!archivo.type.startsWith('image/')) continue;
+
+                try {
+                    const base64Content = await archivoToBase64(archivo);
+                    const cleanBase64 = base64Content.split(',')[1];
+
+                    // Subida a la API de GitHub en la carpeta fotos/
+                    const url = `https://api.github.com/repos/${configGH.usuario}/${configGH.repo}/contents/fotos/${archivo.name}`;
+                    const res = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${configGH.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Subir imagen: ${archivo.name}`,
+                            content: cleanBase64
+                        })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        catalogoFotos.push({
+                            id: data.content.sha,
+                            nombre: archivo.name,
+                            url: data.content.download_url,
+                            estado: 'pendiente'
+                        });
+                    } else {
+                        alert(`Error al subir ${archivo.name}. Verifica los permisos del token.`);
+                    }
+                } catch (err) {
+                    console.error("Error al procesar:", err);
+                }
+            }
+
+            ocultarStatus();
             actualizarVistas();
+        }
+
+        function archivoToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         }
 
         function actualizarVistas() {
@@ -194,7 +285,7 @@
                 tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
                 tarjeta.innerHTML = `
                     <div class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center">
-                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105">
+                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
                         ${tagEstado}
                     </div>
                     <div class="p-4 flex-1 flex flex-col justify-between gap-3">
@@ -247,7 +338,7 @@
                     </div>
                     <div class="p-4 space-y-3">
                         <p class="text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
-                        <a href="${foto.url}" download="${foto.nombre}" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
+                        <a href="${foto.url}" target="_blank" download="${foto.nombre}" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
                             Descargar Foto
                         </a>
                     </div>
@@ -262,18 +353,21 @@
 
             const btnZip = document.getElementById('btn-descarga-zip');
             const textoOriginal = btnZip.innerText;
-            btnZip.innerText = "Empaquetando archivos...";
+            btnZip.innerText = "Empaquetando...";
             btnZip.disabled = true;
 
             const zip = new JSZip();
-            aprobadas.forEach(foto => {
-                zip.file(foto.nombre, foto.blob);
-            });
+
+            for (let foto of aprobadas) {
+                const res = await fetch(foto.url);
+                const blob = await res.blob();
+                zip.file(foto.nombre, blob);
+            }
 
             zip.generateAsync({ type: "blob" }).then((content) => {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(content);
-                link.download = "seleccion_aprobada.zip";
+                link.download = "fotos_aprobadas.zip";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
