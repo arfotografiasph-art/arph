@@ -1,0 +1,10 @@
+{
+  "usuarios": [
+    {
+      "user": "admin",
+      "pass": "admin123",
+      "rol": "admin"
+    }
+  ],
+  "estadosFotos": {}
+}
