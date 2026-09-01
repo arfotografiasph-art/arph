@@ -172,8 +172,7 @@
 
     <script>
         // CONFIGURACIÓN DE TU REPOSITORIO DE GITHUB
-        // Reemplaza con tu usuario y con el nombre exacto de tu repositorio
-        const USUARIO_GITHUB = 'arfotografiasph-ar';
+        const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
 
         let usuarios = JSON.parse(localStorage.getItem('app_usuarios')) || [
@@ -200,12 +199,11 @@
                 const archivos = await res.json();
                 
                 archivos.forEach(archivo => {
-                    // Filtra para que solo cargue archivos con extensiones de imagen válidas
                     if (archivo.type === 'file' && /\.(jpg|jpeg|png|gif|webp)$/i.test(archivo.name)) {
                         catalogoFotos.push({
                             id: crypto.randomUUID(),
                             nombre: archivo.name,
-                            url: archivo.download_url, // URL estática servida directamente por GitHub
+                            url: archivo.download_url,
                             estado: 'pendiente',
                             blob: null
                         });
@@ -214,7 +212,7 @@
 
                 actualizarVistas();
             } catch (error) {
-                console.warn("Aviso: No se cargaron imágenes automáticas desde GitHub. Asegúrate de configurar 'USUARIO_GITHUB' y 'REPO_GITHUB'.", error);
+                console.warn("Aviso: No se cargaron imágenes automáticas desde GitHub.", error);
             }
         }
 
@@ -399,154 +397,4 @@
                 } else if (foto.estado === 'rechazada') {
                     bordeColor = 'border-rose-500 bg-rose-950/20';
                     tagEstado = `<span class="absolute top-3 left-3 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md uppercase tracking-wider z-10">✕ Rechazada</span>`;
-                }
-
-                const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
-                const watermarkClass = esCliente ? 'watermark-overlay' : '';
-
-                const tarjeta = document.createElement('div');
-                tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
-                tarjeta.innerHTML = `
-                    <div onclick="abrirModal('${foto.url}')" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer ${watermarkClass}">
-                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105">
-                        ${tagEstado}
-                    </div>
-                    <div class="p-4 flex-1 flex flex-col justify-between gap-3">
-                        <p class="text-xs text-neutral-400 truncate font-mono" title="${foto.nombre}">${foto.nombre}</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="votarFoto('${foto.id}', 'aprobada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold tracking-wide transition border ${foto.estado === 'aprobada' ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'border-neutral-700 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-400'}">
-                                Aprobar
-                            </button>
-                            <button onclick="votarFoto('${foto.id}', 'rechazada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold tracking-wide transition border ${foto.estado === 'rechazada' ? 'bg-rose-500 text-white border-rose-500' : 'border-neutral-700 hover:border-rose-500 hover:bg-rose-500/10 text-rose-400'}">
-                                Rechazar
-                            </button>
-                        </div>
-                    </div>
-                `;
-                contenedor.appendChild(tarjeta);
-            });
-        }
-
-        function votarFoto(id, decision) {
-            const foto = catalogoFotos.find(f => f.id === id);
-            if (!foto) return;
-
-            foto.estado = (foto.estado === decision) ? 'pendiente' : decision;
-            actualizarVistas();
-        }
-
-        function renderizarPanelFotografo() {
-            const contenedor = document.getElementById('galeria-fotografo');
-            const fotografoVacio = document.getElementById('fotografo-vacio');
-            const btnZip = document.getElementById('btn-descarga-zip');
-            contenedor.innerHTML = '';
-
-            const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
-
-            if (aprobadas.length === 0) {
-                fotografoVacio.classList.remove('hidden');
-                btnZip.disabled = true;
-                return;
-            }
-
-            fotografoVacio.classList.add('hidden');
-            btnZip.disabled = false;
-
-            aprobadas.forEach(foto => {
-                const tarjeta = document.createElement('div');
-                tarjeta.className = "border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between";
-                tarjeta.innerHTML = `
-                    <div onclick="abrirModal('${foto.url}')" class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center cursor-pointer">
-                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full">
-                    </div>
-                    <div class="p-4 space-y-3">
-                        <p class="text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
-                        <a href="${foto.url}" download="${foto.nombre}" target="_blank" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
-                            Descargar Foto
-                        </a>
-                    </div>
-                `;
-                contenedor.appendChild(tarjeta);
-            });
-        }
-
-        function abrirModal(url) {
-            const modal = document.getElementById('modal-preview');
-            const container = document.getElementById('modal-container');
-            const img = document.getElementById('modal-img');
-            
-            img.src = url;
-
-            const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
-            if (esCliente) {
-                container.classList.add('watermark-overlay');
-            } else {
-                container.classList.remove('watermark-overlay');
-            }
-
-            modal.classList.remove('hidden');
-        }
-
-        function cerrarModal() {
-            document.getElementById('modal-preview').classList.add('hidden');
-        }
-
-        async function descargarTodoComoZip() {
-            const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
-            if (aprobadas.length === 0) return;
-
-            const btnZip = document.getElementById('btn-descarga-zip');
-            const textoOriginal = btnZip.innerText;
-            btnZip.innerText = "Empaquetando...";
-            btnZip.disabled = true;
-
-            const zip = new JSZip();
-
-            for (const foto of aprobadas) {
-                if (foto.blob) {
-                    zip.file(foto.nombre, foto.blob);
-                } else {
-                    try {
-                        const response = await fetch(foto.url);
-                        const blobData = await response.blob();
-                        zip.file(foto.nombre, blobData);
-                    } catch (err) {
-                        console.error(`Error al obtener ${foto.nombre}:`, err);
-                    }
-                }
-            }
-
-            zip.generateAsync({ type: "blob" }).then((content) => {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = "fotos_aprobadas.zip";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                btnZip.innerText = textoOriginal;
-                btnZip.disabled = false;
-            });
-        }
-
-        function cambiarVista(vista) {
-            const btnCliente = document.getElementById('tab-cliente');
-            const btnFotografo = document.getElementById('tab-fotografo');
-            const secCliente = document.getElementById('seccion-cliente');
-            const secFotografo = document.getElementById('seccion-fotografo');
-
-            if (vista === 'cliente') {
-                btnCliente.className = "px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer";
-                btnFotografo.className = "px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-2 cursor-pointer";
-                secCliente.classList.remove('hidden');
-                secFotografo.classList.add('hidden');
-            } else {
-                btnCliente.className = "px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white cursor-pointer";
-                btnFotografo.className = "px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md flex items-center gap-2 cursor-pointer";
-                secCliente.classList.add('hidden');
-                secFotografo.classList.remove('hidden');
-            }
-        }
-    </script>
-</body>
-</html>
+          
