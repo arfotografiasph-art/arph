@@ -48,15 +48,19 @@
         
         <!-- SECCIÓN: VISTA DEL CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
+            <!-- Grilla de Fotos del Cliente -->
             <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            
+            <!-- Vista vacía del cliente -->
             <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2">
-                <p class="text-xl font-medium">La galería aún no contiene imágenes.</p>
+                <p class="text-xl font-medium">La galería aún no contains imágenes.</p>
                 <p class="text-sm text-neutral-600">Usa el botón "Subir Fotos" desde el panel de arriba para cargar el contenido.</p>
             </div>
         </section>
 
         <!-- SECCIÓN: PANEL PRIVADO DEL FOTÓGRAFO -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
+            <!-- ZONA DE CARGA ADICIONAL (DRAG & DROP) -->
             <div class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer" id="drop-zone">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
@@ -65,6 +69,7 @@
                 </div>
             </div>
 
+            <!-- CONTROLES DE DESCARGA -->
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
@@ -83,7 +88,7 @@
     </main>
 
     <!-- VISUALIZADOR PANTALLA COMPLETA (LIGHTBOX) -->
-    <div id="lightbox" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex-col justify-between p-4 backdrop-blur-sm animate-fade-in">
+    <div id="lightbox" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex-col justify-between p-4 backdrop-blur-sm">
         <div class="flex justify-between items-center w-full max-w-7xl mx-auto px-4 py-2">
             <p id="lightbox-nombre" class="text-sm font-mono text-neutral-400 truncate max-w-md"></p>
             <button onclick="cerrarLightbox()" class="text-neutral-400 hover:text-white text-3xl font-bold p-2 cursor-pointer transition">&times;</button>
@@ -116,8 +121,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             configurarCargaImagenes();
             actualizarVistas();
-            
-            // Cerrar lightbox con la tecla Escape
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') cerrarLightbox();
             });
@@ -146,7 +149,6 @@
             });
         }
 
-        // Genera la marca de agua sobre la imagen y devuelve una URL temporal protegida
         function crearMarcaAgua(archivoUrl, nombreArchivo) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -157,20 +159,20 @@
                     
                     canvas.width = img.naturalWidth;
                     canvas.height = img.naturalHeight;
-                    
                     ctx.drawImage(img, 0, 0);
                     
-                    // Configuración de la marca de agua estacional
                     const textoMarca = "PROPIEDAD DE ESTUDIO FOTOGRAFICO";
                     const diagonal = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
                     
                     ctx.translate(canvas.width / 2, canvas.height / 2);
-                    ctx.rotate(-Math.PI / 4); // Rotación a 45 grados
+                    ctx.rotate(-Math.PI / 4);
                     
-                    // Escalar dinámicamente el tamaño de la letra basado en la resolución
                     const tamanoLetra = Math.round(diagonal / 22);
                     ctx.font = `bold ${tamanoLetra}px sans-serif`;
                     ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     
+                    ctx.fillText(textoMarca, 0, 0);
+                    ctx.fillText(textoMarca, -diagonal/3, 0);
+                    ctx.fillText(textoMarca, diagonal/3, 0);
