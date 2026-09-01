@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galería de Selección Fotográfica</title>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://cloudflare.com"></script>
+    <!-- Tailwind CSS para diseño moderno y oscuro -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- JSZip para compresión masiva en un archivo ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
@@ -14,41 +16,65 @@
 </head>
 <body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col custom-scrollbar">
 
+    <!-- CABECERA PRINCIPAL -->
     <header class="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
         <div>
             <h1 class="text-xl font-bold tracking-wider uppercase text-white">Estudio Fotográfico</h1>
             <p class="text-xs text-neutral-400">Entrega de Proyectos</p>
         </div>
-        <nav class="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800">
-            <button id="tab-cliente" onclick="cambiarVista('cliente')" class="px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer">
-                Vista del Cliente
+        
+        <!-- Pestañas de Navegación y Botón de Carga Directa -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Selector de archivos oculto global -->
+            <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
+            
+            <!-- Botón directo para subir fotos -->
+            <button onclick="document.getElementById('global-file-input').click()" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-amber-400 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 cursor-pointer shadow-md">
+                <span>☁️</span> Subir Fotos
             </button>
-            <button id="tab-fotografo" onclick="cambiarVista('fotografo')" class="px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-2 cursor-pointer">
-                Panel Fotógrafo
-                <span id="contador-aprobadas" class="bg-neutral-800 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-            </button>
-        </nav>
+
+            <nav class="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800">
+                <button id="tab-cliente" onclick="cambiarVista('cliente')" class="px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer">
+                    Vista del Cliente
+                </button>
+                <button id="tab-fotografo" onclick="cambiarVista('fotografo')" class="px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-2 cursor-pointer">
+                    Panel Fotógrafo
+                    <span id="contador-aprobadas" class="bg-neutral-800 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+            </nav>
+        </div>
     </header>
 
+    <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+        
+        <!-- SECCIÓN: VISTA DEL CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
-            <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            <!-- Grilla de Fotos del Cliente -->
+            <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Se inyecta dinámicamente -->
+            </div>
+            
+            <!-- Vista vacía del cliente -->
             <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2">
                 <p class="text-xl font-medium">La galería aún no contiene imágenes.</p>
-                <p class="text-sm text-neutral-600">El fotógrafo debe cargar las fotos desde su panel privado.</p>
+                <p class="text-sm text-neutral-600">Usa el botón "Subir Fotos" o ve al panel privado para cargar el contenido.</p>
             </div>
         </section>
 
+        <!-- SECCIÓN: PANEL PRIVADO DEL FOTÓGRAFO -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
+            
+            <!-- ZONA DE CARGA ADICIONAL (DRAG & DROP) -->
             <div class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer" id="drop-zone">
-                <input type="file" id="file-input" multiple accept="image/*" class="hidden">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
-                    <p class="text-base font-medium text-neutral-200">Arrastra y suelta las fotos para tu cliente aquí</p>
-                    <p class="text-xs text-neutral-500">o haz clic para explorar tus archivos locales</p>
+                    <p class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí</p>
+                    <p class="text-xs text-neutral-500">o usa el botón de subida en la barra superior</p>
                 </div>
             </div>
 
+            <!-- CONTROLES DE DESCARGA -->
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
@@ -59,17 +85,25 @@
                 </button>
             </div>
 
-            <div id="galeria-fotografo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            <!-- Grilla de Fotos Aprobadas para el Fotógrafo -->
+            <div id="galeria-fotografo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Se inyecta dinámicamente -->
+            </div>
+            
+            <!-- Vista vacía del fotógrafo para aprobaciones -->
             <div id="fotografo-vacio" class="text-center py-12 text-neutral-600">
                 <p class="text-sm">Tu cliente aún no ha marcado ninguna foto como aprobada.</p>
             </div>
         </section>
+
     </main>
 
+    <!-- PIE DE PÁGINA -->
     <footer class="border-t border-neutral-900 bg-neutral-950 py-6 text-center text-xs text-neutral-600">
         &copy; 2026 Estudio Fotográfico Profesional.
     </footer>
 
+    <!-- LÓGICA INTERNA DE LA APLICACIÓN -->
     <script>
         let catalogoFotos = [];
 
@@ -78,31 +112,40 @@
             actualizarVistas();
         });
 
+        // Configuración de los métodos de carga (Botón y Arrastre)
         function configurarCargaImagenes() {
             const dropZone = document.getElementById('drop-zone');
-            const fileInput = document.getElementById('file-input');
+            const globalFileInput = document.getElementById('global-file-input');
 
-            dropZone.addEventListener('click', () => fileInput.click());
+            // Evento para el botón del menú superior
+            globalFileInput.addEventListener('change', (e) => {
+                procesarArchivos(e.target.files);
+            });
+
+            // Eventos para la zona de arrastre del panel
+            dropZone.addEventListener('click', () => globalFileInput.click());
+            
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
             });
+
             dropZone.addEventListener('dragleave', () => {
                 dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
             });
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
                 procesarArchivos(e.dataTransfer.files);
             });
-            fileInput.addEventListener('change', (e) => {
-                procesarArchivos(e.target.files);
-            });
         }
 
+        // Convierte los archivos en recursos visuales internos
         function procesarArchivos(archivos) {
             Array.from(archivos).forEach(archivo => {
                 if (!archivo.type.startsWith('image/')) return;
+
                 const nuevaFoto = {
                     id: crypto.randomUUID(),
                     nombre: archivo.name,
@@ -112,12 +155,14 @@
                 };
                 catalogoFotos.push(nuevaFoto);
             });
+
             actualizarVistas();
         }
 
         function actualizarVistas() {
             renderizarGaleriaCliente();
             renderizarPanelFotografo();
+            
             const aprobadasCount = catalogoFotos.filter(f => f.estado === 'aprobada').length;
             document.getElementById('contador-aprobadas').innerText = aprobadasCount;
         }
@@ -171,8 +216,91 @@
         function votarFoto(id, decision) {
             const foto = catalogoFotos.find(f => f.id === id);
             if (!foto) return;
+
             foto.estado = (foto.estado === decision) ? 'pendiente' : decision;
             actualizarVistas();
         }
 
         function renderizarPanelFotografo() {
+            const contenedor = document.getElementById('galeria-fotografo');
+            const fotografoVacio = document.getElementById('fotografo-vacio');
+            const btnZip = document.getElementById('btn-descarga-zip');
+            contenedor.innerHTML = '';
+
+            const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
+
+            if (aprobadas.length === 0) {
+                fotografoVacio.classList.remove('hidden');
+                btnZip.disabled = true;
+                return;
+            }
+
+            fotografoVacio.classList.add('hidden');
+            btnZip.disabled = false;
+
+            aprobadas.forEach(foto => {
+                const tarjeta = document.createElement('div');
+                tarjeta.className = "border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between";
+                tarjeta.innerHTML = `
+                    <div class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center">
+                        <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full">
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <p class="text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
+                        <a href="${foto.url}" download="${foto.nombre}" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1.5 rounded-lg text-xs transition border border-neutral-700">
+                            Descargar Foto
+                        </a>
+                    </div>
+                `;
+                contenedor.appendChild(tarjeta);
+            });
+        }
+
+        async function descargarTodoComoZip() {
+            const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
+            if (aprobadas.length === 0) return;
+
+            const btnZip = document.getElementById('btn-descarga-zip');
+            const textoOriginal = btnZip.innerText;
+            btnZip.innerText = "Empaquetando archivos...";
+            btnZip.disabled = true;
+
+            const zip = new JSZip();
+            aprobadas.forEach(foto => {
+                zip.file(foto.nombre, foto.blob);
+            });
+
+            zip.generateAsync({ type: "blob" }).then((content) => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "seleccion_aprobada.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                btnZip.innerText = textoOriginal;
+                btnZip.disabled = false;
+            });
+        }
+
+        function cambiarVista(vista) {
+            const btnCliente = document.getElementById('tab-cliente');
+            const btnFotografo = document.getElementById('tab-fotografo');
+            const secCliente = document.getElementById('seccion-cliente');
+            const secFotografo = document.getElementById('seccion-fotografo');
+
+            if (vista === 'cliente') {
+                btnCliente.className = "px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer";
+                btnFotografo.className = "px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-2 cursor-pointer";
+                secCliente.classList.remove('hidden');
+                secFotografo.classList.add('hidden');
+            } else {
+                btnCliente.className = "px-4 py-2 text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white cursor-pointer";
+                btnFotografo.className = "px-4 py-2 text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md flex items-center gap-2 cursor-pointer";
+                secCliente.classList.add('hidden');
+                secFotografo.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
