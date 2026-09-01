@@ -15,20 +15,21 @@
         
         /* Marca de agua para el cliente */
         .watermark-overlay::after {
-            content: "AR FOTOGRAFÍAS";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: clamp(2rem, 8vw, 5rem);
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.25);
-            text-shadow: 0 0 15px rgba(0,0,0,0.7);
-            pointer-events: none;
-            user-select: none;
-            white-space: nowrap;
-            z-index: 20;
-        }
+    content: "AR FOTOGRAFÍAS";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: clamp(2rem, 8vw, 5rem);
+    font-weight: 900;
+    /* Opacidad reducida al 10% para mayor translucidez */
+    color: rgba(255, 255, 255, 0.10); 
+    text-shadow: 0 0 10px rgba(0,0,0,0.3);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    z-index: 20;
+}
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col custom-scrollbar">
