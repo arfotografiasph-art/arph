@@ -59,9 +59,6 @@
                     Iniciar Sesión
                 </button>
             </form>
-            <div class="text-center border-t border-neutral-800 pt-4">
-                <p class="text-xs text-neutral-500">Credenciales Admin: <strong class="text-neutral-300">admin / admin123</strong></p>
-            </div>
         </div>
     </div>
 
@@ -80,6 +77,7 @@
         <div class="flex flex-wrap items-center gap-3">
             <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
             
+            <!-- Botón para cargar fotos solo visible para admin -->
             <button id="btn-cargar-fotos" onclick="intentarCargarArchivos()" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 font-medium px-4 py-2 rounded-lg transition text-sm flex items-center gap-2 cursor-pointer">
                 <span>📁</span> Cargar Más Fotos
             </button>
@@ -102,6 +100,7 @@
 
     <!-- CONTENIDO -->
     <main id="app-main" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full">
+        <!-- VISTA CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
             <div id="galeria-cliente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
             <div id="cliente-vacio" class="text-center py-24 text-neutral-500 space-y-2 hidden">
@@ -109,7 +108,9 @@
             </div>
         </section>
 
+        <!-- PANEL FOTÓGRAFO (SOLO ACCESIBLE/OPERABLE POR ADMIN) -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
+            <!-- Bloque para crear usuarios (Solo Admin) -->
             <div id="bloque-crear-usuarios" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
                 <h2 class="text-lg font-semibold text-amber-400">Crear Usuarios para Clientes</h2>
                 <form id="form-crear-usuario" onsubmit="crearUsuarioCliente(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -125,6 +126,7 @@
                 </div>
             </div>
 
+            <!-- Zona para arrastrar fotos (Solo Admin) -->
             <div id="drop-zone" class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
@@ -159,15 +161,20 @@
 
     <script>
         // CONFIGURACIÓN API GITHUB
-        const GITHUB_TOKEN = "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"; 
+        const GITHUB_TOKEN = "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN"; 
         const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
         const FILE_DATOS = 'datos.json';
 
-        let usuarios = [{ user: 'admin', pass: 'admin123', rol: 'admin' }];
+        // Usuarios por defecto
+        let usuarios = [
+            { user: 'admin', pass: 'admin123', rol: 'admin' },
+            { user: 'cliente', pass: 'cliente2026', rol: 'cliente' }
+        ];
+
         let usuarioActual = null;
         let catalogoFotos = [];
-        let datosSha = null; // Requerido por GitHub para actualizar archivos
+        let datosSha = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             await cargarDatosDesdeGitHub();
@@ -178,19 +185,35 @@
         // LEER DATOS DESDE GITHUB (datos.json)
         async function cargarDatosDesdeGitHub() {
             try {
-                const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, {
-                    headers: GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {}
-                });
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (GITHUB_TOKEN && GITHUB_TOKEN !== "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+                    headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+                }
+
+                const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, { headers });
                 
                 if (res.ok) {
                     const data = await res.json();
                     datosSha = data.sha;
                     
-                    // Decodificar Base64 de la API de GitHub
-                    const contenidoTexto = decodeURIComponent(escape(atob(data.content)));
+                    const bytesString = atob(data.content.replace(/\n/g, ''));
+                    const bytes = new Uint8Array(bytesString.length);
+                    for (let i = 0; i < bytesString.length; i++) {
+                        bytes[i] = bytesString.charCodeAt(i);
+                    }
+                    const contenidoTexto = new TextDecoder().decode(bytes);
                     const datosGuardados = JSON.parse(contenidoTexto);
                     
-                    if (datosGuardados.usuarios) usuarios = datosGuardados.usuarios;
+                    if (datosGuardados.usuarios) {
+                        const unificados = [...usuarios];
+                        datosGuardados.usuarios.forEach(u => {
+                            if (!unificados.some(exist => exist.user === u.user)) {
+                                unificados.push(u);
+                            }
+                        });
+                        usuarios = unificados;
+                    }
+
                     if (datosGuardados.estadosFotos) {
                         catalogoFotos.forEach(foto => {
                             if (datosGuardados.estadosFotos[foto.id]) {
@@ -200,54 +223,57 @@
                     }
                 }
             } catch (error) {
-                console.warn("No se encontró datos.json previamente creado o hubo error de red.", error);
+                console.warn("No se pudo cargar datos.json o no existe aún:", error);
             }
             renderizarListaUsuarios();
         }
 
         // GUARDAR DATOS EN GITHUB (datos.json)
         async function guardarDatosEnGitHub() {
-            if (!GITHUB_TOKEN || GITHUB_TOKEN === "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") {
-                console.warn("Agrega un Token de GitHub para habilitar guardado remoto permanente.");
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+                console.warn("Token no configurado. Cambios no persistidos en GitHub.");
                 return;
             }
 
             const estadosFotosMap = {};
             catalogoFotos.forEach(f => estadosFotosMap[f.id] = f.estado);
 
-            const contenidoJSON = JSON.stringify({
+            const objetoDatos = {
                 usuarios: usuarios,
                 estadosFotos: estadosFotosMap
-            }, null, 2);
+            };
 
-            // Convertir a Base64 con soporte de caracteres UTF-8
-            const contenidoBase64 = btoa(unescape(encodeURIComponent(contenidoJSON)));
+            const jsonString = JSON.stringify(objetoDatos, null, 2);
+            const bytes = new TextEncoder().encode(jsonString);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const contenidoBase64 = btoa(binary);
 
             try {
                 const body = {
-                    message: "Actualización de usuarios/votos",
-                    content: contenidoBase64,
-                    ...(datosSha && { sha: datosSha })
+                    message: "Actualización de usuarios/fotos",
+                    content: contenidoBase64
                 };
+                if (datosSha) body.sha = datosSha;
 
                 const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
                     },
                     body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
-                    const result = await res.json();
-                    datosSha = result.content.sha;
-                    console.log("Sincronización exitosa en GitHub.");
-                } else {
-                    console.error("Error al escribir en GitHub:", await res.json());
+                    const respuestaApi = await res.json();
+                    datosSha = respuestaApi.content.sha;
                 }
             } catch (error) {
-                console.error("Error de comunicación con API de GitHub:", error);
+                console.error("Error al guardar en GitHub:", error);
             }
         }
 
@@ -277,7 +303,7 @@
 
                 actualizarVistas();
             } catch (error) {
-                console.warn("Aviso:", error);
+                console.warn("Aviso al cargar fotos:", error);
             }
         }
 
@@ -309,12 +335,11 @@
             const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
             
             document.getElementById('btn-cargar-fotos').classList.toggle('hidden', !esAdmin);
-            document.getElementById('nuevo-user').disabled = !esAdmin;
-            document.getElementById('nuevo-pass').disabled = !esAdmin;
-            document.getElementById('btn-crear-user').disabled = !esAdmin;
-
+            document.getElementById('bloque-crear-usuarios').classList.toggle('hidden', !esAdmin);
+            
             const dropZone = document.getElementById('drop-zone');
             const dropText = document.getElementById('drop-zone-text');
+            
             if (!esAdmin) {
                 dropZone.classList.add('opacity-50', 'cursor-not-allowed');
                 dropText.innerText = "🔒 Subida deshabilitada (Solo Administrador)";
@@ -333,7 +358,10 @@
 
         async function crearUsuarioCliente(e) {
             e.preventDefault();
-            if (usuarioActual.rol !== 'admin') return;
+            if (!usuarioActual || usuarioActual.rol !== 'admin') {
+                alert("No tienes permisos para crear usuarios.");
+                return;
+            }
 
             const user = document.getElementById('nuevo-user').value.trim();
             const pass = document.getElementById('nuevo-pass').value.trim();
@@ -353,6 +381,8 @@
         }
 
         async function eliminarUsuario(nombreUsuario) {
+            if (!usuarioActual || usuarioActual.rol !== 'admin') return;
+
             if (confirm(`¿Eliminar al cliente "${nombreUsuario}"?`)) {
                 usuarios = usuarios.filter(u => u.user !== nombreUsuario);
                 renderizarListaUsuarios();
@@ -430,6 +460,7 @@
                             <button onclick="votarFoto('${foto.id}', 'aprobada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold border ${foto.estado === 'aprobada' ? 'bg-emerald-500 text-neutral-950 border-emerald-500' : 'border-neutral-700 hover:border-emerald-500 text-emerald-400'}">Aprobar</button>
                             <button onclick="votarFoto('${foto.id}', 'rechazada')" class="cursor-pointer py-1.5 rounded-lg text-xs font-semibold border ${foto.estado === 'rechazada' ? 'bg-rose-500 text-white border-rose-500' : 'border-neutral-700 hover:border-rose-500 text-rose-400'}">Rechazar</button>
                         </div>
+                        <a href="${foto.url}" download="${foto.nombre}" target="_blank" class="block text-center bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-1 rounded-lg text-xs border border-neutral-700 mt-1">Descargar Foto</a>
                     </div>
                 `;
                 contenedor.appendChild(tarjeta);
@@ -535,7 +566,9 @@
         }
 
         function intentarCargarArchivos() {
-            if (usuarioActual.rol === 'admin') document.getElementById('global-file-input').click();
+            if (usuarioActual && usuarioActual.rol === 'admin') {
+                document.getElementById('global-file-input').click();
+            }
         }
 
         function configurarCargaImagenes() {
@@ -543,11 +576,15 @@
             const globalFileInput = document.getElementById('global-file-input');
 
             globalFileInput.addEventListener('change', (e) => {
-                if (usuarioActual.rol === 'admin') procesarArchivosLocales(e.target.files);
+                if (usuarioActual && usuarioActual.rol === 'admin') {
+                    procesarArchivosLocales(e.target.files);
+                }
             });
 
             dropZone.addEventListener('click', () => {
-                if (usuarioActual.rol === 'admin') globalFileInput.click();
+                if (usuarioActual && usuarioActual.rol === 'admin') {
+                    globalFileInput.click();
+                }
             });
         }
 
