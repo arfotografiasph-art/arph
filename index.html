@@ -167,7 +167,7 @@
 
     <script>
         // CONFIGURACIÓN API GITHUB
-        const GITHUB_TOKEN = "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"; 
+        let GITHUB_TOKEN = ""; 
         const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
         const FILE_DATOS = 'datos.json';
@@ -186,6 +186,16 @@
             await cargarFotosAutomaticasGitHub();
             configurarCargaImagenes();
         });
+
+        function obtenerOClaveToken() {
+            if (!GITHUB_TOKEN) {
+                const tokenIngresado = prompt("Por favor ingresa tu GITHUB_TOKEN para subir/modificar archivos:");
+                if (tokenIngresado) {
+                    GITHUB_TOKEN = tokenIngresado.trim();
+                }
+            }
+            return GITHUB_TOKEN;
+        }
 
         // LEER DATOS DESDE GITHUB (datos.json)
         async function cargarDatosDesdeGitHub() {
@@ -235,7 +245,8 @@
 
         // GUARDAR DATOS EN GITHUB (datos.json)
         async function guardarDatosEnGitHub() {
-            if (!GITHUB_TOKEN) return;
+            const token = obtenerOClaveToken();
+            if (!token) return;
 
             const estadosFotosMap = {};
             catalogoFotos.forEach(f => estadosFotosMap[f.id] = f.estado);
@@ -263,7 +274,7 @@
                 const res = await fetch(`https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${FILE_DATOS}`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Authorization': `token ${token}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/vnd.github.v3+json'
                     },
@@ -312,8 +323,9 @@
 
         // SUBIR UNA FOTO DIRECTAMENTE A LA CARPETA "fotos/" DE GITHUB
         async function subirFotoAGitHub(file) {
-            if (!GITHUB_TOKEN) {
-                alert("Debes configurar tu GITHUB_TOKEN para poder subir fotos a la carpeta del repositorio.");
+            const token = obtenerOClaveToken();
+            if (!token) {
+                alert("Se requiere un GITHUB_TOKEN válido para subir fotos.");
                 return null;
             }
 
@@ -328,7 +340,7 @@
                     try {
                         let shaExistente = null;
                         const checkRes = await fetch(urlApi, {
-                            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                            headers: { 'Authorization': `token ${token}` }
                         });
                         if (checkRes.ok) {
                             const dataExistente = await checkRes.json();
@@ -344,7 +356,7 @@
                         const res = await fetch(urlApi, {
                             method: 'PUT',
                             headers: {
-                                'Authorization': `token ${GITHUB_TOKEN}`,
+                                'Authorization': `token ${token}`,
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/vnd.github.v3+json'
                             },
@@ -413,6 +425,7 @@
 
         function cerrarSesion() {
             usuarioActual = null;
+            GITHUB_TOKEN = "";
             document.getElementById('pantalla-login').classList.remove('hidden');
             document.getElementById('app-header').classList.add('hidden');
             document.getElementById('app-main').classList.add('hidden');
@@ -668,7 +681,6 @@
             const totalArchivos = listaArchivos.length;
             let subidos = 0;
 
-            // Mostrar la barra de progreso
             contenedorProgreso.classList.remove('hidden');
             dropText.innerText = `Subiendo fotos a GitHub...`;
             
@@ -698,7 +710,6 @@
                 textoProgreso.innerText = `${porcentaje}% (${subidos}/${totalArchivos})`;
             }
 
-            // Finalizar carga y ocultar barra tras un segundo
             setTimeout(() => {
                 contenedorProgreso.classList.add('hidden');
                 barraProgreso.style.width = '0%';
