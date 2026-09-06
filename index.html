@@ -124,11 +124,19 @@
                 </div>
             </div>
 
-            <!-- Zona de Carga a GitHub -->
+            <!-- Zona de Carga a GitHub con Barra de Progreso -->
             <div id="drop-zone" class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
                     <p id="drop-zone-text" class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí para subir a GitHub</p>
+                    
+                    <!-- BARRA DE PROGRESO DE CARGA -->
+                    <div id="contenedor-progreso" class="hidden max-w-md mx-auto space-y-2 pt-2">
+                        <div class="w-full bg-neutral-950 rounded-full h-3 border border-neutral-800 overflow-hidden">
+                            <div id="barra-progreso" class="bg-amber-500 h-full w-0 transition-all duration-300 rounded-full"></div>
+                        </div>
+                        <p id="texto-progreso" class="text-xs text-amber-400 font-mono">0% (0/0)</p>
+                    </div>
                 </div>
             </div>
 
@@ -647,14 +655,25 @@
             });
         }
 
+        // PROCESAR Y SUBIR ARCHIVOS CON BARRA DE PROGRESO
         async function procesarArchivosLocales(archivos) {
             const listaArchivos = Array.from(archivos).filter(f => f.type.startsWith('image/'));
             if (listaArchivos.length === 0) return;
 
             const dropText = document.getElementById('drop-zone-text');
-            dropText.innerText = "⏳ Subiendo fotos a GitHub...";
+            const contenedorProgreso = document.getElementById('contenedor-progreso');
+            const barraProgreso = document.getElementById('barra-progreso');
+            const textoProgreso = document.getElementById('texto-progreso');
 
-            for (const archivo of listaArchivos) {
+            const totalArchivos = listaArchivos.length;
+            let subidos = 0;
+
+            // Mostrar la barra de progreso
+            contenedorProgreso.classList.remove('hidden');
+            dropText.innerText = `Subiendo fotos a GitHub...`;
+            
+            for (let i = 0; i < totalArchivos; i++) {
+                const archivo = listaArchivos[i];
                 try {
                     const resultado = await subirFotoAGitHub(archivo);
                     if (resultado) {
@@ -672,9 +691,21 @@
                     console.error(`Error al subir ${archivo.name}:`, err);
                     alert(`Ocurrió un error al subir "${archivo.name}" a GitHub: ${err}`);
                 }
+
+                subidos++;
+                const porcentaje = Math.round((subidos / totalArchivos) * 100);
+                barraProgreso.style.width = `${porcentaje}%`;
+                textoProgreso.innerText = `${porcentaje}% (${subidos}/${totalArchivos})`;
             }
 
-            dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
+            // Finalizar carga y ocultar barra tras un segundo
+            setTimeout(() => {
+                contenedorProgreso.classList.add('hidden');
+                barraProgreso.style.width = '0%';
+                textoProgreso.innerText = '0% (0/0)';
+                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
+            }, 1000);
+
             actualizarVistas();
             await guardarDatosEnGitHub();
         }
