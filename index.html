@@ -19,23 +19,6 @@
         /* Desactivar resaltado azul al tocar en móviles */
         * { -webkit-tap-highlight-color: transparent; }
 
-        /* Marca de agua adaptativa */
-        .watermark-overlay::after {
-            content: "AR FOTOGRAFÍAS";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: clamp(1.2rem, 6vw, 4.5rem);
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.12);
-            text-shadow: 0 0 8px rgba(0,0,0,0.4);
-            pointer-events: none;
-            user-select: none;
-            white-space: nowrap;
-            z-index: 20;
-        }
-
         /* Rejilla responsiva optimizada */
         .responsive-grid {
             display: grid;
@@ -290,24 +273,42 @@
 
         async function descargarFotoDirecta(event, url, nombreArchivo) {
             if (event) event.preventDefault();
-            
+
+            // Detección de dispositivos iOS (iPhone / iPad / iPod)
+            const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
             try {
                 const respuesta = await fetch(url);
                 const blob = await respuesta.blob();
-                
+                const file = new File([blob], nombreArchivo || 'fotografia.jpg', { type: blob.type });
+
+                // Si es iOS y el navegador soporta compartir archivos nativamente
+                if (esIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: nombreArchivo || 'Fotografía',
+                    });
+                    return;
+                }
+
+                // Comportamiento estándar para Android / PC / Laptops
                 const blobUrl = URL.createObjectURL(blob);
                 const enlaceTemporal = document.createElement('a');
                 enlaceTemporal.href = blobUrl;
                 enlaceTemporal.download = nombreArchivo || 'fotografia.jpg';
-                
+
                 document.body.appendChild(enlaceTemporal);
                 enlaceTemporal.click();
                 document.body.removeChild(enlaceTemporal);
-                
+
                 URL.revokeObjectURL(blobUrl);
+
             } catch (error) {
-                console.error("Error en la descarga directa, abriendo enlace alternativo:", error);
-                window.open(url, '_blank');
+                if (error.name !== 'AbortError') {
+                    console.error("Error al procesar la descarga:", error);
+                    window.open(url, '_blank');
+                }
             }
         }
 
@@ -644,13 +645,10 @@
                     tagEstado = `<span class="absolute top-2.5 left-2.5 bg-rose-500 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-md uppercase z-10">✕ Rechazada</span>`;
                 }
 
-                const esCliente = usuarioActual && usuarioActual.rol === 'cliente';
-                const watermarkClass = esCliente ? 'watermark-overlay' : '';
-
                 const tarjeta = document.createElement('div');
                 tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
                 tarjeta.innerHTML = `
-                    <div onclick="abrirModalPorOrigen('cliente', ${idx})" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer ${watermarkClass}">
+                    <div onclick="abrirModalPorOrigen('cliente', ${idx})" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer">
                         <img src="${foto.url}" alt="${foto.nombre}" loading="lazy" class="object-cover w-full h-full transition duration-500 group-hover:scale-105">
                         ${tagEstado}
                     </div>
@@ -723,7 +721,6 @@
             
             const foto = listaModalActual[indiceModalActual];
             const img = document.getElementById('modal-img');
-            const container = document.getElementById('modal-container');
             const btnDescarga = document.getElementById('modal-btn-download');
             const txtNombre = document.getElementById('modal-img-name');
 
@@ -731,12 +728,6 @@
             btnDescarga.href = foto.url;
             btnDescarga.download = foto.nombre;
             txtNombre.innerText = foto.nombre;
-
-            if (usuarioActual && usuarioActual.rol === 'cliente') {
-                container.classList.add('watermark-overlay');
-            } else {
-                container.classList.remove('watermark-overlay');
-            }
         }
 
         function modalNavegar(direccion) {
