@@ -174,12 +174,23 @@
         </section>
     </main>
 
-    <!-- MODAL PREVIEW -->
-    <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex items-center justify-center p-4">
+    <!-- MODAL PREVIEW CON NAVEGACIÓN Y SWIPE -->
+    <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex items-center justify-center p-4 select-none">
         <button onclick="cerrarModal()" class="absolute top-6 right-6 text-white text-3xl font-bold hover:text-amber-400 cursor-pointer z-30">&times;</button>
-        <div id="modal-container" class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center overflow-hidden rounded-xl">
-            <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+        
+        <!-- Botón Anterior -->
+        <button onclick="modalNavegar(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
+            ❮
+        </button>
+
+        <div id="modal-container" class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center overflow-hidden rounded-xl touch-pan-y">
+            <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[85vh] object-contain rounded-lg transition-transform duration-300">
         </div>
+
+        <!-- Botón Siguiente -->
+        <button onclick="modalNavegar(1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
+            ❯
+        </button>
     </div>
 
     <script>
@@ -198,6 +209,12 @@
         let catalogoFotos = [];
         let datosSha = null;
 
+        // Variables de Control para Modal y Swipe
+        let indiceModalActual = -1;
+        let listaModalActual = [];
+        let touchStartX = 0;
+        let touchEndX = 0;
+
         document.addEventListener('DOMContentLoaded', async () => {
             const tokenCampo = document.getElementById('input-token-github');
             if (GITHUB_TOKEN) {
@@ -206,6 +223,7 @@
             await cargarDatosDesdeGitHub();
             await cargarFotosAutomaticasGitHub();
             configurarCargaImagenes();
+            configurarGestosModal();
         });
 
         function guardarTokenLocal() {
@@ -537,7 +555,7 @@
             }
             vistaVacia.classList.add('hidden');
 
-            catalogoFotos.forEach(foto => {
+            catalogoFotos.forEach((foto, idx) => {
                 let bordeColor = 'border-neutral-800 bg-neutral-900';
                 let tagEstado = '';
 
@@ -555,7 +573,7 @@
                 const tarjeta = document.createElement('div');
                 tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
                 tarjeta.innerHTML = `
-                    <div onclick="abrirModal('${foto.url}')" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer ${watermarkClass}">
+                    <div onclick="abrirModalPorOrigen('cliente', ${idx})" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer ${watermarkClass}">
                         <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full transition duration-500 group-hover:scale-105">
                         ${tagEstado}
                     </div>
@@ -589,11 +607,11 @@
             fotografoVacio.classList.add('hidden');
             btnZip.disabled = false;
 
-            aprobadas.forEach(foto => {
+            aprobadas.forEach((foto, idx) => {
                 const tarjeta = document.createElement('div');
                 tarjeta.className = "border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between";
                 tarjeta.innerHTML = `
-                    <div onclick="abrirModal('${foto.url}')" class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center cursor-pointer">
+                    <div onclick="abrirModalPorOrigen('fotografo', ${idx})" class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center cursor-pointer">
                         <img src="${foto.url}" alt="${foto.nombre}" class="object-cover w-full h-full">
                     </div>
                     <div class="p-4 space-y-3">
@@ -605,21 +623,100 @@
             });
         }
 
-        function abrirModal(url) {
+        // CONTROL DEL MODAL CON NAVEGACIÓN
+        function abrirModalPorOrigen(origen, indice) {
+            if (origen === 'cliente') {
+                listaModalActual = catalogoFotos;
+            } else {
+                listaModalActual = catalogoFotos.filter(f => f.estado === 'aprobada');
+            }
+
+            indiceModalActual = indice;
+            mostrarFotoModal();
+
             const modal = document.getElementById('modal-preview');
+            modal.classList.remove('hidden');
+        }
+
+        function mostrarFotoModal() {
+            if (indiceModalActual < 0 || indiceModalActual >= listaModalActual.length) return;
+            
+            const foto = listaModalActual[indiceModalActual];
+            const img = document.getElementById('modal-img');
             const container = document.getElementById('modal-container');
-            document.getElementById('modal-img').src = url;
+
+            img.src = foto.url;
 
             if (usuarioActual && usuarioActual.rol === 'cliente') {
                 container.classList.add('watermark-overlay');
             } else {
                 container.classList.remove('watermark-overlay');
             }
-            modal.classList.remove('hidden');
+        }
+
+        function modalNavegar(direccion) {
+            if (listaModalActual.length <= 1) return;
+
+            indiceModalActual += direccion;
+            
+            // Loop circular en la galería
+            if (indiceModalActual < 0) {
+                indiceModalActual = listaModalActual.length - 1;
+            } else if (indiceModalActual >= listaModalActual.length) {
+                indiceModalActual = 0;
+            }
+
+            mostrarFotoModal();
         }
 
         function cerrarModal() {
             document.getElementById('modal-preview').classList.add('hidden');
+            indiceModalActual = -1;
+            listaModalActual = [];
+        }
+
+        // CONFIGURACIÓN DE GESTOS SWIPE Y TECLADO
+        function configurarGestosModal() {
+            const modalContainer = document.getElementById('modal-preview');
+
+            // Gestos Táctiles (Swipe)
+            modalContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            modalContainer.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                manejarSwipe();
+            }, { passive: true });
+
+            // Teclas de Flecha (Izquierda / Derecha)
+            document.addEventListener('keydown', (e) => {
+                const modal = document.getElementById('modal-preview');
+                if (modal.classList.contains('hidden')) return;
+
+                if (e.key === 'ArrowLeft') {
+                    modalNavegar(-1);
+                } else if (e.key === 'ArrowRight') {
+                    modalNavegar(1);
+                } else if (e.key === 'Escape') {
+                    cerrarModal();
+                }
+            });
+        }
+
+        function manejarSwipe() {
+            const diferenciaX = touchEndX - touchStartX;
+            const umbralMinimo = 50; // Desplazamiento mínimo en píxeles para detectar el gesto
+
+            if (Math.abs(diferenciaX) > umbralMinimo) {
+                if (diferenciaX < 0) {
+                    // Deslizó hacia la izquierda -> Siguiente foto
+                    modalNavegar(1);
+                } else {
+                    // Deslizó hacia la derecha -> Foto anterior
+                    modalNavegar(-1);
+                }
+            }
         }
 
         async function descargarTodoComoZip() {
