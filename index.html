@@ -167,7 +167,7 @@
 
     <script>
         // CONFIGURACIÓN API GITHUB
-        const GITHUB_TOKEN = "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN"; 
+        const GITHUB_TOKEN = "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"; 
         const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
         const FILE_DATOS = 'datos.json';
@@ -191,7 +191,7 @@
         async function cargarDatosDesdeGitHub() {
             try {
                 const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (GITHUB_TOKEN && GITHUB_TOKEN !== "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+                if (GITHUB_TOKEN) {
                     headers['Authorization'] = `token ${GITHUB_TOKEN}`;
                 }
 
@@ -235,7 +235,7 @@
 
         // GUARDAR DATOS EN GITHUB (datos.json)
         async function guardarDatosEnGitHub() {
-            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") return;
+            if (!GITHUB_TOKEN) return;
 
             const estadosFotosMap = {};
             catalogoFotos.forEach(f => estadosFotosMap[f.id] = f.estado);
@@ -312,7 +312,7 @@
 
         // SUBIR UNA FOTO DIRECTAMENTE A LA CARPETA "fotos/" DE GITHUB
         async function subirFotoAGitHub(file) {
-            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+            if (!GITHUB_TOKEN) {
                 alert("Debes configurar tu GITHUB_TOKEN para poder subir fotos a la carpeta del repositorio.");
                 return null;
             }
