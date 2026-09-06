@@ -174,23 +174,40 @@
         </section>
     </main>
 
-    <!-- MODAL PREVIEW CON NAVEGACIÓN Y SWIPE -->
-    <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex items-center justify-center p-4 select-none">
-        <button onclick="cerrarModal()" class="absolute top-6 right-6 text-white text-3xl font-bold hover:text-amber-400 cursor-pointer z-30">&times;</button>
+    <!-- MODAL PREVIEW CON NAVEGACIÓN, SWIPE Y DESCARGA -->
+    <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 z-50 hidden flex flex-col items-center justify-between p-4 select-none">
         
-        <!-- Botón Anterior -->
-        <button onclick="modalNavegar(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
-            ❮
-        </button>
-
-        <div id="modal-container" class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center overflow-hidden rounded-xl touch-pan-y">
-            <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[85vh] object-contain rounded-lg transition-transform duration-300">
+        <!-- BARRA SUPERIOR DEL MODAL -->
+        <div class="w-full max-w-5xl flex items-center justify-between z-30 pt-2 px-2">
+            <a id="modal-btn-download" href="#" download target="_blank" class="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg transition cursor-pointer">
+                <span>⬇</span> Descargar Foto
+            </a>
+            <button onclick="cerrarModal()" class="text-neutral-400 hover:text-white text-3xl font-bold transition cursor-pointer leading-none px-2">&times;</button>
         </div>
 
-        <!-- Botón Siguiente -->
-        <button onclick="modalNavegar(1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
-            ❯
-        </button>
+        <!-- CONTENEDOR DE LA IMAGEN Y BOTONES FLOTANTES -->
+        <div class="relative w-full max-w-5xl flex-1 flex items-center justify-center overflow-hidden my-2">
+            
+            <!-- Botón Anterior -->
+            <button onclick="modalNavegar(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
+                ❮
+            </button>
+
+            <!-- Imagen Principal -->
+            <div id="modal-container" class="relative max-w-full max-h-[75vh] flex items-center justify-center overflow-hidden rounded-xl touch-pan-y">
+                <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[75vh] object-contain rounded-lg transition-transform duration-300">
+            </div>
+
+            <!-- Botón Siguiente -->
+            <button onclick="modalNavegar(1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white p-3 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-lg hidden sm:block">
+                ❯
+            </button>
+        </div>
+
+        <!-- FOOTER MODAL (Nombre de la foto) -->
+        <div class="w-full text-center pb-2 z-30">
+            <p id="modal-img-name" class="text-xs text-neutral-400 font-mono truncate max-w-xs mx-auto"></p>
+        </div>
     </div>
 
     <script>
@@ -623,7 +640,7 @@
             });
         }
 
-        // CONTROL DEL MODAL CON NAVEGACIÓN
+        // CONTROL DEL MODAL CON NAVEGACIÓN Y DESCARGA DIRECTA
         function abrirModalPorOrigen(origen, indice) {
             if (origen === 'cliente') {
                 listaModalActual = catalogoFotos;
@@ -644,8 +661,14 @@
             const foto = listaModalActual[indiceModalActual];
             const img = document.getElementById('modal-img');
             const container = document.getElementById('modal-container');
+            const btnDescarga = document.getElementById('modal-btn-download');
+            const txtNombre = document.getElementById('modal-img-name');
 
+            // Actualizar la foto y datos en el modal
             img.src = foto.url;
+            btnDescarga.href = foto.url;
+            btnDescarga.download = foto.nombre;
+            txtNombre.innerText = foto.nombre;
 
             if (usuarioActual && usuarioActual.rol === 'cliente') {
                 container.classList.add('watermark-overlay');
