@@ -77,7 +77,6 @@
         <div class="flex flex-wrap items-center gap-3">
             <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
             
-            <!-- Botón para cargar fotos solo visible para admin -->
             <button id="btn-cargar-fotos" onclick="intentarCargarArchivos()" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 font-medium px-4 py-2 rounded-lg transition text-sm flex items-center gap-2 cursor-pointer">
                 <span>📁</span> Cargar Más Fotos
             </button>
@@ -108,9 +107,8 @@
             </div>
         </section>
 
-        <!-- PANEL FOTÓGRAFO (SOLO ACCESIBLE/OPERABLE POR ADMIN) -->
+        <!-- PANEL FOTÓGRAFO (SOLO ADMIN) -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
-            <!-- Bloque para crear usuarios (Solo Admin) -->
             <div id="bloque-crear-usuarios" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
                 <h2 class="text-lg font-semibold text-amber-400">Crear Usuarios para Clientes</h2>
                 <form id="form-crear-usuario" onsubmit="crearUsuarioCliente(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -126,11 +124,11 @@
                 </div>
             </div>
 
-            <!-- Zona para arrastrar fotos (Solo Admin) -->
+            <!-- Zona de Carga a GitHub -->
             <div id="drop-zone" class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-8 transition group text-center relative cursor-pointer">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
-                    <p id="drop-zone-text" class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí</p>
+                    <p id="drop-zone-text" class="text-base font-medium text-neutral-200">Arrastra y suelta más fotos aquí para subir a GitHub</p>
                 </div>
             </div>
 
@@ -166,7 +164,6 @@
         const REPO_GITHUB = 'arph';
         const FILE_DATOS = 'datos.json';
 
-        // Usuarios por defecto
         let usuarios = [
             { user: 'admin', pass: 'admin123', rol: 'admin' },
             { user: 'cliente', pass: 'cliente2026', rol: 'cliente' }
@@ -230,10 +227,7 @@
 
         // GUARDAR DATOS EN GITHUB (datos.json)
         async function guardarDatosEnGitHub() {
-            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
-                console.warn("Token no configurado. Cambios no persistidos en GitHub.");
-                return;
-            }
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") return;
 
             const estadosFotosMap = {};
             catalogoFotos.forEach(f => estadosFotosMap[f.id] = f.estado);
@@ -277,6 +271,7 @@
             }
         }
 
+        // CARGAR FOTOS DE LA CARPETA "fotos/" EN GITHUB
         async function cargarFotosAutomaticasGitHub() {
             const urlApi = `https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/fotos`;
 
@@ -305,6 +300,65 @@
             } catch (error) {
                 console.warn("Aviso al cargar fotos:", error);
             }
+        }
+
+        // SUBIR UNA FOTO DIRECTAMENTE A LA CARPETA "fotos/" DE GITHUB
+        async function subirFotoAGitHub(file) {
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "INGRESA_AQUI_TU_PERSONAL_ACCESS_TOKEN") {
+                alert("Debes configurar tu GITHUB_TOKEN para poder subir fotos a la carpeta del repositorio.");
+                return null;
+            }
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    const base64Content = reader.result.split(',')[1];
+                    const rutaArchivo = `fotos/${file.name}`;
+                    const urlApi = `https://api.github.com/repos/${USUARIO_GITHUB}/${REPO_GITHUB}/contents/${rutaArchivo}`;
+
+                    try {
+                        let shaExistente = null;
+                        const checkRes = await fetch(urlApi, {
+                            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                        });
+                        if (checkRes.ok) {
+                            const dataExistente = await checkRes.json();
+                            shaExistente = dataExistente.sha;
+                        }
+
+                        const body = {
+                            message: `Subir imagen ${file.name} desde la web`,
+                            content: base64Content
+                        };
+                        if (shaExistente) body.sha = shaExistente;
+
+                        const res = await fetch(urlApi, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${GITHUB_TOKEN}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/vnd.github.v3+json'
+                            },
+                            body: JSON.stringify(body)
+                        });
+
+                        if (res.ok) {
+                            const dataRes = await res.json();
+                            resolve({
+                                nombre: file.name,
+                                url: dataRes.content.download_url
+                            });
+                        } else {
+                            const errData = await res.json();
+                            reject(errData.message || "Error al subir a GitHub");
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+            });
         }
 
         function iniciarSesion(e) {
@@ -345,7 +399,7 @@
                 dropText.innerText = "🔒 Subida deshabilitada (Solo Administrador)";
             } else {
                 dropZone.classList.remove('opacity-50', 'cursor-not-allowed');
-                dropText.innerText = "Arrastra y suelta más fotos aquí";
+                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
             }
         }
 
@@ -358,10 +412,7 @@
 
         async function crearUsuarioCliente(e) {
             e.preventDefault();
-            if (!usuarioActual || usuarioActual.rol !== 'admin') {
-                alert("No tienes permisos para crear usuarios.");
-                return;
-            }
+            if (!usuarioActual || usuarioActual.rol !== 'admin') return;
 
             const user = document.getElementById('nuevo-user').value.trim();
             const pass = document.getElementById('nuevo-pass').value.trim();
@@ -586,20 +637,46 @@
                     globalFileInput.click();
                 }
             });
+
+            dropZone.addEventListener('dragover', (e) => e.preventDefault());
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (usuarioActual && usuarioActual.rol === 'admin') {
+                    procesarArchivosLocales(e.dataTransfer.files);
+                }
+            });
         }
 
-        function procesarArchivosLocales(archivos) {
-            Array.from(archivos).forEach(archivo => {
-                if (!archivo.type.startsWith('image/')) return;
-                const fotoId = archivo.name.replace(/[^a-zA-Z0-9]/g, '_');
-                catalogoFotos.push({
-                    id: fotoId,
-                    nombre: archivo.name,
-                    url: URL.createObjectURL(archivo),
-                    estado: 'pendiente'
-                });
-            });
+        async function procesarArchivosLocales(archivos) {
+            const listaArchivos = Array.from(archivos).filter(f => f.type.startsWith('image/'));
+            if (listaArchivos.length === 0) return;
+
+            const dropText = document.getElementById('drop-zone-text');
+            dropText.innerText = "⏳ Subiendo fotos a GitHub...";
+
+            for (const archivo of listaArchivos) {
+                try {
+                    const resultado = await subirFotoAGitHub(archivo);
+                    if (resultado) {
+                        const fotoId = archivo.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        if (!catalogoFotos.some(f => f.id === fotoId)) {
+                            catalogoFotos.push({
+                                id: fotoId,
+                                nombre: resultado.nombre,
+                                url: resultado.url,
+                                estado: 'pendiente'
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Error al subir ${archivo.name}:`, err);
+                    alert(`Ocurrió un error al subir "${archivo.name}" a GitHub: ${err}`);
+                }
+            }
+
+            dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
             actualizarVistas();
+            await guardarDatosEnGitHub();
         }
     </script>
 </body>
