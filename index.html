@@ -109,6 +109,23 @@
 
         <!-- PANEL FOTÓGRAFO (SOLO ADMIN) -->
         <section id="seccion-fotografo" class="space-y-8 hidden">
+            
+            <!-- BLOQUE DE CONFIGURACIÓN DEL TOKEN GITHUB -->
+            <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🔑</span>
+                    <h2 class="text-lg font-semibold text-amber-400">Configuración de Token GitHub</h2>
+                </div>
+                <p class="text-xs text-neutral-400">Pega aquí tu Personal Access Token generado en GitHub para poder subir fotos y guardar cambios sin bloqueos.</p>
+                <div class="flex flex-col md:flex-row gap-3 pt-1">
+                    <input type="password" id="input-token-github" placeholder="ghp_tuTokenAqui..." class="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-sm focus:border-amber-500 focus:outline-none font-mono">
+                    <button onclick="guardarTokenLocal()" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-5 py-2.5 rounded-lg text-sm transition cursor-pointer">
+                        Guardar Token
+                    </button>
+                </div>
+                <p id="mensaje-token" class="text-xs font-medium hidden"></p>
+            </div>
+
             <div id="bloque-crear-usuarios" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
                 <h2 class="text-lg font-semibold text-amber-400">Crear Usuarios para Clientes</h2>
                 <form id="form-crear-usuario" onsubmit="crearUsuarioCliente(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -167,7 +184,7 @@
 
     <script>
         // CONFIGURACIÓN API GITHUB
-        let GITHUB_TOKEN = ""; 
+        let GITHUB_TOKEN = localStorage.getItem('GITHUB_TOKEN_AR') || ""; 
         const USUARIO_GITHUB = 'arfotografiasph-art';
         const REPO_GITHUB = 'arph';
         const FILE_DATOS = 'datos.json';
@@ -182,17 +199,37 @@
         let datosSha = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            const tokenCampo = document.getElementById('input-token-github');
+            if (GITHUB_TOKEN) {
+                tokenCampo.value = GITHUB_TOKEN;
+            }
             await cargarDatosDesdeGitHub();
             await cargarFotosAutomaticasGitHub();
             configurarCargaImagenes();
         });
 
+        function guardarTokenLocal() {
+            const tokenVal = document.getElementById('input-token-github').value.trim();
+            const msg = document.getElementById('mensaje-token');
+            if (tokenVal) {
+                GITHUB_TOKEN = tokenVal;
+                localStorage.setItem('GITHUB_TOKEN_AR', tokenVal);
+                msg.className = "text-xs font-medium text-emerald-400 block";
+                msg.innerText = "✓ Token guardado localmente con éxito.";
+            } else {
+                GITHUB_TOKEN = "";
+                localStorage.removeItem('GITHUB_TOKEN_AR');
+                msg.className = "text-xs font-medium text-amber-400 block";
+                msg.innerText = "Token borrado.";
+            }
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+        }
+
         function obtenerOClaveToken() {
             if (!GITHUB_TOKEN) {
-                const tokenIngresado = prompt("Por favor ingresa tu GITHUB_TOKEN para subir/modificar archivos:");
-                if (tokenIngresado) {
-                    GITHUB_TOKEN = tokenIngresado.trim();
-                }
+                alert("Por favor ingresa tu GITHUB_TOKEN en el Panel de Fotógrafo para realizar esta acción.");
+                cambiarVista('fotografo');
+                return null;
             }
             return GITHUB_TOKEN;
         }
@@ -324,10 +361,7 @@
         // SUBIR UNA FOTO DIRECTAMENTE A LA CARPETA "fotos/" DE GITHUB
         async function subirFotoAGitHub(file) {
             const token = obtenerOClaveToken();
-            if (!token) {
-                alert("Se requiere un GITHUB_TOKEN válido para subir fotos.");
-                return null;
-            }
+            if (!token) return null;
 
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -425,7 +459,6 @@
 
         function cerrarSesion() {
             usuarioActual = null;
-            GITHUB_TOKEN = "";
             document.getElementById('pantalla-login').classList.remove('hidden');
             document.getElementById('app-header').classList.add('hidden');
             document.getElementById('app-main').classList.add('hidden');
