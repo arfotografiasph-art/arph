@@ -9,6 +9,11 @@
       "user": "cliente",
       "pass": "cliente2026",
       "rol": "cliente"
+    },
+    {
+      "user": "adri",
+      "pass": "adri",
+      "rol": "cliente"
     }
   ],
   "carpetas": [
