@@ -20,16 +20,28 @@
             grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
             gap: 1.25rem;
         }
+
+        .img-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #171717;
+            color: #737373;
+            font-size: 0.75rem;
+            font-family: monospace;
+            text-align: center;
+            padding: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col custom-scrollbar overflow-x-hidden">
 
     <!-- LOGIN RESPONSIVE -->
-    <div id="pantalla-login" class="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div id="pantalla-login" class="fixed inset-0 bg-neutral-950/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <div class="bg-neutral-900 border border-neutral-800 p-6 sm:p-8 rounded-2xl max-w-sm sm:max-w-md w-full space-y-6 shadow-2xl my-auto">
             <div class="text-center space-y-3">
-                <div class="bg-white p-2.5 rounded-2xl w-24 h-24 sm:w-28 sm:h-28 mx-auto flex items-center justify-center shadow-lg">
-                    <img src="logo.jpeg" alt="Logo AR Fotografías" class="max-h-full max-w-full object-contain">
+                <div class="bg-white/5 border border-neutral-800 p-2.5 rounded-2xl w-24 h-24 sm:w-28 sm:h-28 mx-auto flex items-center justify-center shadow-lg overflow-hidden">
+                    <img src="logo.jpeg" alt="Logo AR Fotografías" class="max-h-full max-w-full object-contain" onerror="manejarImagenRota(this, '📷 Studio AR')">
                 </div>
                 <div>
                     <h1 class="text-lg sm:text-xl font-bold tracking-wider uppercase text-white">Estudio Fotográfico AR</h1>
@@ -60,8 +72,8 @@
             
             <div class="flex items-center justify-between w-full md:w-auto">
                 <div class="flex items-center gap-2.5 sm:gap-3">
-                    <div class="bg-white p-1 rounded-lg w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 shadow">
-                        <img src="logo.jpeg" alt="Logo AR" class="max-h-full object-contain">
+                    <div class="bg-neutral-800 p-1 rounded-lg w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 shadow overflow-hidden border border-neutral-700">
+                        <img src="logo.jpeg" alt="Logo AR" class="max-h-full object-contain" onerror="manejarImagenRota(this, 'AR')">
                     </div>
                     <div>   
                         <h1 class="text-sm sm:text-base md:text-lg font-bold tracking-wider uppercase text-white leading-tight">Estudio AR</h1>
@@ -69,7 +81,7 @@
                     </div>
                 </div>
 
-                <button onclick="cerrarSesion()" class="md:hidden bg-rose-950/40 hover:bg-rose-900/60 active:scale-95 text-rose-300 border border-rose-800/50 px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+                <button onclick="cerrarSesion()" class="md:hidden bg-rose-950/40 hover:bg-rose-900/60 active:scale-95 text-rose-300 border border-rose-800/50 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition">
                     Salir
                 </button>
             </div>
@@ -132,7 +144,7 @@
         <!-- PANEL FOTÓGRAFO (SOLO ADMIN) -->
         <section id="seccion-fotografo" class="space-y-6 sm:space-y-8 hidden">
             
-            <!-- TOKEN GITHUB (ARRIBA PARA VISIBILIDAD DE CONFIGURACIÓN) -->
+            <!-- TOKEN GITHUB -->
             <div id="bloque-token-github" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 space-y-3">
                 <div class="flex items-center gap-2">
                     <span class="text-lg sm:text-xl">🔑</span>
@@ -247,7 +259,7 @@
             </button>
 
             <div id="modal-container" class="relative max-w-full max-h-[70vh] sm:max-h-[75vh] flex items-center justify-center overflow-hidden rounded-xl touch-pan-y">
-                <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[70vh] sm:max-h-[75vh] object-contain rounded-lg transition-transform duration-200">
+                <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[70vh] sm:max-h-[75vh] object-contain rounded-lg transition-transform duration-200" onerror="manejarImagenRota(this, 'Error al cargar imagen')">
             </div>
 
             <button onclick="modalNavegar(1)" class="absolute right-1 sm:right-3 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-xl flex items-center justify-center text-sm sm:text-base">
@@ -297,6 +309,15 @@
             configurarCargaImagenes();
             configurarGestosModal();
         });
+
+        function manejarImagenRota(imgEl, textoOpcional) {
+            const div = document.createElement('div');
+            div.className = imgEl.className + ' img-fallback';
+            div.innerText = textoOpcional || '⚠️ Imagen no disponible';
+            if (imgEl.parentNode) {
+                imgEl.parentNode.replaceChild(div, imgEl);
+            }
+        }
 
         function cargarEstadosLocales() {
             const guardado = localStorage.getItem('ESTADOS_FOTOS_AR');
@@ -460,7 +481,6 @@
                     const data = await res.json();
                     datosSha = data.sha;
                     
-                    // Decodificación UTF-8 compatible con acentos y caracteres especiales
                     const bytesString = atob(data.content.replace(/\n/g, ''));
                     const bytes = new Uint8Array(bytesString.length);
                     for (let i = 0; i < bytesString.length; i++) bytes[i] = bytesString.charCodeAt(i);
@@ -504,7 +524,6 @@
 
             const jsonString = JSON.stringify(objetoDatos, null, 2);
             
-            // Codificación UTF-8 robusta para Base64
             const bytes = new TextEncoder().encode(jsonString);
             let binary = '';
             for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
@@ -654,7 +673,6 @@
             const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
             
             document.getElementById('tab-fotografo').classList.toggle('hidden', !esAdmin);
-            document.getElementById('btn-cargar-fotos').classList.toggle('hidden', !esAdmin);
             
             const dropZone = document.getElementById('drop-zone');
             const dropText = document.getElementById('drop-zone-text');
@@ -675,7 +693,6 @@
             document.getElementById('app-main').classList.add('hidden');
         }
 
-        // CLIENTE PERMANENTE EN GITHUB
         async function crearUsuarioCliente(e) {
             e.preventDefault();
             if (!usuarioActual || usuarioActual.rol !== 'admin') return;
@@ -797,7 +814,7 @@
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.onclick = () => seleccionarCarpetaCliente(c);
-                btn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     esActiva ? 'bg-amber-500 text-neutral-950 font-bold' : 'bg-neutral-800 text-neutral-300 border border-neutral-700'
                 }`;
                 btn.innerText = `📁 ${c}`;
@@ -876,7 +893,7 @@
                 tarjeta.className = `border ${bordeColor} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col group relative`;
                 tarjeta.innerHTML = `
                     <div onclick="abrirModalPorOrigen('cliente', ${idx})" class="relative aspect-square overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer">
-                        <img src="${foto.url}" alt="${foto.nombre}" loading="lazy" class="object-cover w-full h-full transition duration-500 group-hover:scale-105">
+                        <img src="${foto.url}" alt="${foto.nombre}" loading="lazy" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" onerror="manejarImagenRota(this, '${foto.nombre}')">
                         ${tagEstado}
                     </div>
                     <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between gap-2.5">
@@ -914,7 +931,7 @@
                 tarjeta.className = "border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between";
                 tarjeta.innerHTML = `
                     <div onclick="abrirModalPorOrigen('fotografo', ${idx})" class="aspect-square bg-neutral-950 overflow-hidden flex items-center justify-center cursor-pointer">
-                        <img src="${foto.url}" alt="${foto.nombre}" loading="lazy" class="object-cover w-full h-full">
+                        <img src="${foto.url}" alt="${foto.nombre}" loading="lazy" class="object-cover w-full h-full" onerror="manejarImagenRota(this, '${foto.nombre}')">
                     </div>
                     <div class="p-3 sm:p-4 space-y-2.5">
                         <p class="text-[11px] sm:text-xs text-neutral-300 truncate font-mono">${foto.nombre}</p>
@@ -1057,12 +1074,6 @@
                 if (btnFotografo) btnFotografo.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md flex items-center gap-1.5 cursor-pointer";
                 secCliente.classList.add('hidden');
                 secFotografo.classList.remove('hidden');
-            }
-        }
-
-        function intentarCargarArchivos() {
-            if (usuarioActual && usuarioActual.rol === 'admin') {
-                document.getElementById('global-file-input').click();
             }
         }
 
