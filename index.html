@@ -9,14 +9,17 @@
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
+        /* Desplazamiento fluido y barra personalizada */
         html { scroll-behavior: smooth; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0a0a0a; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         
+        /* Desactivar resaltado azul al tocar en móviles */
         * { -webkit-tap-highlight-color: transparent; }
 
+        /* Rejilla responsiva optimizada */
         .responsive-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
@@ -56,10 +59,11 @@
         </div>
     </div>
 
-    <!-- CABECERA -->
+    <!-- CABECERA ADAPTATIVA -->
     <header id="app-header" class="hidden border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             
+            <!-- Marca y Logo -->
             <div class="flex items-center justify-between w-full md:w-auto">
                 <div class="flex items-center gap-2.5 sm:gap-3">
                     <div class="bg-white p-1 rounded-lg w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 shadow">
@@ -76,6 +80,7 @@
                 </button>
             </div>
             
+            <!-- Controles y Navegación -->
             <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-2 sm:gap-3">
                 <input type="file" id="global-file-input" multiple accept="image/*" class="hidden">
                 
@@ -85,11 +90,10 @@
 
                 <nav class="flex bg-neutral-950 p-1 rounded-xl border border-neutral-800 shrink-0">
                     <button id="tab-cliente" onclick="cambiarVista('cliente')" class="px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer">
-                        Vista Cliente
+                        Cliente
                     </button>
-                    <!-- Menú Fotógrafo exclusivo para admin -->
-                    <button id="tab-fotografo" onclick="cambiarVista('fotografo')" class="hidden px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-1.5 cursor-pointer">
-                        <span>Panel Fotógrafo</span>
+                    <button id="tab-fotografo" onclick="cambiarVista('fotografo')" class="px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-1.5 cursor-pointer">
+                        <span>Fotógrafo</span>
                         <span id="contador-aprobadas" class="bg-neutral-800 text-amber-400 text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-bold">0</span>
                     </button>
                 </nav>
@@ -102,62 +106,19 @@
     </header>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main id="app-main" class="hidden flex-1 p-3 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
-        
+    <main id="app-main" class="hidden flex-1 p-3 sm:p-6 max-w-7xl mx-auto w-full">
         <!-- VISTA CLIENTE -->
         <section id="seccion-cliente" class="space-y-6">
-            
-            <!-- Barra del Cliente: Filtro + Descargar Aprobadas en ZIP -->
-            <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="flex items-center gap-2">
-                    <button id="btn-filtro-todas" onclick="filtrarCliente('todas')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-neutral-950 transition cursor-pointer">
-                        Todas las Fotos
-                    </button>
-                    <button id="btn-filtro-aprobadas" onclick="filtrarCliente('aprobadas')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 transition cursor-pointer flex items-center gap-1.5">
-                        <span>✓ Aprobadas</span>
-                        <span id="badge-cliente-aprobadas" class="bg-neutral-950 text-amber-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
-                    </button>
-                </div>
-
-                <button id="btn-cliente-zip" onclick="descargarTodoComoZip()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold px-4 py-2 rounded-xl transition text-xs shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    <span>📦</span> Descargar Mis Aprobadas (.ZIP)
-                </button>
-            </div>
-
             <div id="galeria-cliente" class="responsive-grid"></div>
-            <div id="cliente-vacio" class="text-center py-20 text-neutral-500 space-y-2 hidden">
-                <p class="text-lg sm:text-xl font-medium">No hay fotos que coincidan con este filtro.</p>
+            <div id="cliente-vacio" class="text-center py-20 sm:py-28 text-neutral-500 space-y-2 hidden">
+                <p class="text-lg sm:text-xl font-medium">La galería aún no contiene imágenes.</p>
             </div>
         </section>
 
-        <!-- PANEL FOTÓGRAFO (SOLO ADMIN) -->
+        <!-- PANEL FOTÓGRAFO -->
         <section id="seccion-fotografo" class="space-y-6 sm:space-y-8 hidden">
             
-            <!-- SUBMENÚ DE CARPETAS -->
-            <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg sm:text-xl">📁</span>
-                        <h2 class="text-base sm:text-lg font-semibold text-amber-400">Gestión de Carpetas / Álbumes</h2>
-                    </div>
-                </div>
-
-                <!-- Formulario Crear Carpeta -->
-                <form onsubmit="crearNuevaCarpeta(event)" class="flex flex-col sm:flex-row gap-2.5">
-                    <input type="text" id="input-nueva-carpeta" placeholder="Nombre del nuevo álbum (ej: Bodas, Retratos)..." required class="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs sm:text-sm focus:border-amber-500 focus:outline-none">
-                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition cursor-pointer shrink-0">
-                        + Crear Carpeta
-                    </button>
-                </form>
-
-                <!-- Selector de Carpetas Activa -->
-                <div>
-                    <p class="text-xs text-neutral-400 mb-2 font-medium">Selecciona la carpeta activa para organizar/subir fotos:</p>
-                    <div id="lista-carpetas" class="flex flex-wrap gap-2"></div>
-                </div>
-            </div>
-
-            <!-- BLOQUE CONFIGURACIÓN TOKEN -->
+            <!-- BLOQUE DE CONFIGURACIÓN DE TOKEN (ADMIN) -->
             <div id="bloque-token-github" class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 space-y-3">
                 <div class="flex items-center gap-2">
                     <span class="text-lg sm:text-xl">🔑</span>
@@ -193,7 +154,7 @@
             <div id="drop-zone" class="bg-neutral-900 border-2 border-dashed border-neutral-700 hover:border-amber-500/50 rounded-2xl p-6 sm:p-8 transition group text-center relative cursor-pointer">
                 <div class="space-y-3 pointer-events-none">
                     <div class="text-3xl sm:text-4xl text-neutral-500 group-hover:text-amber-400 transition">📸</div>
-                    <p id="drop-zone-text" class="text-xs sm:text-sm font-medium text-neutral-200">Arrastra y suelta fotos aquí para subir a la carpeta activa</p>
+                    <p id="drop-zone-text" class="text-xs sm:text-sm font-medium text-neutral-200">Arrastra y suelta fotos aquí o toca para seleccionar</p>
                     
                     <div id="contenedor-progreso" class="hidden max-w-xs sm:max-w-md mx-auto space-y-2 pt-2">
                         <div class="w-full bg-neutral-950 rounded-full h-2.5 border border-neutral-800 overflow-hidden">
@@ -204,10 +165,11 @@
                 </div>
             </div>
 
+            <!-- PANEL ACCIONES ZIP -->
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-base sm:text-lg font-semibold text-amber-400">Fotos Aprobadas en Tiempo Real</h2>
-                    <p class="text-xs sm:text-sm text-neutral-400 mt-0.5">Muestra las selecciones marcadas por los clientes.</p>
+                    <h2 class="text-base sm:text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
+                    <p class="text-xs sm:text-sm text-neutral-400 mt-0.5">Fotos seleccionadas listos para procesamiento final.</p>
                 </div>
                 <button id="btn-descarga-zip" onclick="descargarTodoComoZip()" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-bold px-5 py-2.5 rounded-xl transition text-xs sm:text-sm shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0" disabled>
                     Descargar Aprobadas (.ZIP)
@@ -216,13 +178,15 @@
 
             <div id="galeria-fotografo" class="responsive-grid"></div>
             <div id="fotografo-vacio" class="text-center py-12 text-neutral-600">
-                <p class="text-xs sm:text-sm">No hay ninguna foto marcada como aprobada actualmente.</p>
+                <p class="text-xs sm:text-sm">Tu cliente aún no ha marcado ninguna foto como aprobada.</p>
             </div>
         </section>
     </main>
 
-    <!-- MODAL PREVIEW ADAPTATIVO -->
+    <!-- MODAL PREVIEW ADAPTATIVO TOUCH Y DESK -->
     <div id="modal-preview" class="fixed inset-0 bg-neutral-950/95 backdrop-blur-md z-50 hidden flex flex-col items-center justify-between p-3 sm:p-5 select-none">
+        
+        <!-- BARRA SUPERIOR MODAL -->
         <div class="w-full max-w-5xl flex items-center justify-between z-30 shrink-0">
             <a id="modal-btn-download" href="#" onclick="descargarFotoDirecta(event, this.href, this.download)" class="bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white border border-neutral-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg transition cursor-pointer">
                 <span>⬇</span> <span class="hidden sm:inline">Descargar Foto</span>
@@ -230,20 +194,26 @@
             <button onclick="cerrarModal()" class="text-neutral-400 hover:text-white text-2xl sm:text-3xl font-bold transition cursor-pointer leading-none p-2">&times;</button>
         </div>
 
+        <!-- CONTENEDOR VISUALIZADOR -->
         <div class="relative w-full max-w-5xl flex-1 flex items-center justify-center overflow-hidden my-auto py-2">
+            
+            <!-- Botón Izquierdo -->
             <button onclick="modalNavegar(-1)" class="absolute left-1 sm:left-3 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-xl flex items-center justify-center text-sm sm:text-base">
                 ❮
             </button>
 
+            <!-- Contenedor Imagen -->
             <div id="modal-container" class="relative max-w-full max-h-[70vh] sm:max-h-[75vh] flex items-center justify-center overflow-hidden rounded-xl touch-pan-y">
                 <img id="modal-img" src="" alt="Vista previa" class="max-w-full max-h-[70vh] sm:max-h-[75vh] object-contain rounded-lg transition-transform duration-200">
             </div>
 
+            <!-- Botón Derecho -->
             <button onclick="modalNavegar(1)" class="absolute right-1 sm:right-3 top-1/2 -translate-y-1/2 bg-neutral-900/80 hover:bg-amber-500 hover:text-neutral-950 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-neutral-700 transition z-30 cursor-pointer shadow-xl flex items-center justify-center text-sm sm:text-base">
                 ❯
             </button>
         </div>
 
+        <!-- PIE MODAL -->
         <div class="w-full text-center shrink-0 pt-1">
             <p id="modal-img-name" class="text-[11px] sm:text-xs text-neutral-400 font-mono truncate max-w-xs sm:max-w-md mx-auto px-2"></p>
         </div>
@@ -259,10 +229,6 @@
             { user: 'admin', pass: 'admin123', rol: 'admin' },
             { user: 'adriedu', pass: 'adriedu', rol: 'cliente' }
         ];
-
-        let carpetas = ['General'];
-        let carpetaActiva = 'General';
-        let filtroClienteActual = 'todas'; // 'todas' o 'aprobadas'
 
         let usuarioActual = null;
         let catalogoFotos = [];
@@ -281,7 +247,6 @@
             cargarEstadosLocales();
             await cargarDatosDesdeGitHub();
             await cargarFotosAutomaticasGitHub();
-            renderizarCarpetas();
             configurarCargaImagenes();
             configurarGestosModal();
         });
@@ -306,47 +271,10 @@
             localStorage.setItem('ESTADOS_FOTOS_AR', JSON.stringify(estadosMap));
         }
 
-        // CARPETAS SUBMENÚ
-        function crearNuevaCarpeta(e) {
-            e.preventDefault();
-            const input = document.getElementById('input-nueva-carpeta');
-            const nombre = input.value.trim();
-            if (nombre && !carpetas.includes(nombre)) {
-                carpetas.push(nombre);
-                carpetaActiva = nombre;
-                input.value = '';
-                renderizarCarpetas();
-            }
-        }
-
-        function seleccionarCarpeta(nombre) {
-            carpetaActiva = nombre;
-            renderizarCarpetas();
-        }
-
-        function renderizarCarpetas() {
-            const contenedor = document.getElementById('lista-carpetas');
-            if (!contenedor) return;
-            contenedor.innerHTML = '';
-
-            carpetas.forEach(c => {
-                const esActiva = c === carpetaActiva;
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.onclick = () => seleccionarCarpeta(c);
-                btn.className = `px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
-                    esActiva 
-                    ? 'bg-amber-500 text-neutral-950 shadow-md' 
-                    : 'bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700'
-                }`;
-                btn.innerHTML = `<span>📁 ${c}</span>`;
-                contenedor.appendChild(btn);
-            });
-        }
-
         async function descargarFotoDirecta(event, url, nombreArchivo) {
             if (event) event.preventDefault();
 
+            // Detección de dispositivos iOS (iPhone / iPad / iPod)
             const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -355,6 +283,7 @@
                 const blob = await respuesta.blob();
                 const file = new File([blob], nombreArchivo || 'fotografia.jpg', { type: blob.type });
 
+                // Si es iOS y el navegador soporta compartir archivos nativamente
                 if (esIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
@@ -363,6 +292,7 @@
                     return;
                 }
 
+                // Comportamiento estándar para Android / PC / Laptops
                 const blobUrl = URL.createObjectURL(blob);
                 const enlaceTemporal = document.createElement('a');
                 enlaceTemporal.href = blobUrl;
@@ -430,11 +360,6 @@
                         usuarios = unificados;
                     }
 
-                    if (datosGuardados.carpetas) {
-                        carpetas = datosGuardados.carpetas;
-                        renderizarCarpetas();
-                    }
-
                     if (datosGuardados.estadosFotos) {
                         catalogoFotos.forEach(foto => {
                             if (datosGuardados.estadosFotos[foto.id]) {
@@ -458,7 +383,6 @@
 
             const objetoDatos = {
                 usuarios: usuarios,
-                carpetas: carpetas,
                 estadosFotos: estadosFotosMap
             };
 
@@ -472,7 +396,7 @@
 
             try {
                 const body = {
-                    message: "Actualización de usuarios/fotos/carpetas",
+                    message: "Actualización de usuarios/fotos",
                     content: contenidoBase64
                 };
                 if (datosSha) body.sha = datosSha;
@@ -514,8 +438,7 @@
                                 id: fotoId,
                                 nombre: archivo.name,
                                 url: archivo.download_url,
-                                estado: 'pendiente',
-                                carpeta: 'General'
+                                estado: 'pendiente'
                             });
                         }
                     }
@@ -610,9 +533,9 @@
         function aplicarPermisosRol() {
             const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
             
-            // Pestaña Panel Fotógrafo sólo para admin
-            document.getElementById('tab-fotografo').classList.toggle('hidden', !esAdmin);
             document.getElementById('btn-cargar-fotos').classList.toggle('hidden', !esAdmin);
+            document.getElementById('bloque-crear-usuarios').classList.toggle('hidden', !esAdmin);
+            document.getElementById('bloque-token-github').classList.toggle('hidden', !esAdmin);
             
             const dropZone = document.getElementById('drop-zone');
             const dropText = document.getElementById('drop-zone-text');
@@ -622,7 +545,7 @@
                 dropText.innerText = "🔒 Subida deshabilitada (Solo Administrador)";
             } else {
                 dropZone.classList.remove('opacity-50', 'cursor-not-allowed');
-                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a la carpeta activa";
+                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
             }
         }
 
@@ -693,35 +616,10 @@
             }
         }
 
-        function filtrarCliente(tipo) {
-            filtroClienteActual = tipo;
-            const btnTodas = document.getElementById('btn-filtro-todas');
-            const btnAprobadas = document.getElementById('btn-filtro-aprobadas');
-
-            if (tipo === 'todas') {
-                btnTodas.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-neutral-950 transition cursor-pointer";
-                btnAprobadas.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 transition cursor-pointer flex items-center gap-1.5";
-            } else {
-                btnAprobadas.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-neutral-950 transition cursor-pointer flex items-center gap-1.5";
-                btnTodas.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 transition cursor-pointer";
-            }
-
-            renderizarGaleriaCliente();
-        }
-
         function actualizarVistas() {
-            const numAprobadas = catalogoFotos.filter(f => f.estado === 'aprobada').length;
-            document.getElementById('contador-aprobadas').innerText = numAprobadas;
-            document.getElementById('badge-cliente-aprobadas').innerText = numAprobadas;
-            
-            // Habilitar / Deshabilitar botones ZIP
-            const btnClienteZip = document.getElementById('btn-cliente-zip');
-            const btnFotografoZip = document.getElementById('btn-descarga-zip');
-            if (btnClienteZip) btnClienteZip.disabled = (numAprobadas === 0);
-            if (btnFotografoZip) btnFotografoZip.disabled = (numAprobadas === 0);
-
             renderizarGaleriaCliente();
             renderizarPanelFotografo();
+            document.getElementById('contador-aprobadas').innerText = catalogoFotos.filter(f => f.estado === 'aprobada').length;
         }
 
         function renderizarGaleriaCliente() {
@@ -729,18 +627,13 @@
             const vistaVacia = document.getElementById('cliente-vacio');
             contenedor.innerHTML = '';
 
-            let lista = catalogoFotos;
-            if (filtroClienteActual === 'aprobadas') {
-                lista = catalogoFotos.filter(f => f.estado === 'aprobada');
-            }
-
-            if (lista.length === 0) {
+            if (catalogoFotos.length === 0) {
                 vistaVacia.classList.remove('hidden');
                 return;
             }
             vistaVacia.classList.add('hidden');
 
-            lista.forEach((foto, idx) => {
+            catalogoFotos.forEach((foto, idx) => {
                 let bordeColor = 'border-neutral-800 bg-neutral-900';
                 let tagEstado = '';
 
@@ -777,17 +670,19 @@
         function renderizarPanelFotografo() {
             const contenedor = document.getElementById('galeria-fotografo');
             const fotografoVacio = document.getElementById('fotografo-vacio');
-            if (!contenedor) return;
+            const btnZip = document.getElementById('btn-descarga-zip');
             contenedor.innerHTML = '';
 
             const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
 
             if (aprobadas.length === 0) {
                 fotografoVacio.classList.remove('hidden');
+                btnZip.disabled = true;
                 return;
             }
 
             fotografoVacio.classList.add('hidden');
+            btnZip.disabled = false;
 
             aprobadas.forEach((foto, idx) => {
                 const tarjeta = document.createElement('div');
@@ -809,9 +704,7 @@
 
         function abrirModalPorOrigen(origen, indice) {
             if (origen === 'cliente') {
-                listaModalActual = (filtroClienteActual === 'aprobadas') 
-                    ? catalogoFotos.filter(f => f.estado === 'aprobada')
-                    : catalogoFotos;
+                listaModalActual = catalogoFotos;
             } else {
                 listaModalActual = catalogoFotos.filter(f => f.estado === 'aprobada');
             }
@@ -900,11 +793,9 @@
             const aprobadas = catalogoFotos.filter(f => f.estado === 'aprobada');
             if (aprobadas.length === 0) return;
 
-            const btnZipCliente = document.getElementById('btn-cliente-zip');
-            const btnZipFotografo = document.getElementById('btn-descarga-zip');
-
-            if (btnZipCliente) { btnZipCliente.innerText = "Empaquetando..."; btnZipCliente.disabled = true; }
-            if (btnZipFotografo) { btnZipFotografo.innerText = "Empaquetando..."; btnZipFotografo.disabled = true; }
+            const btnZip = document.getElementById('btn-descarga-zip');
+            btnZip.innerText = "Empaquetando...";
+            btnZip.disabled = true;
 
             const zip = new JSZip();
             for (const foto of aprobadas) {
@@ -922,9 +813,8 @@
                 link.href = URL.createObjectURL(content);
                 link.download = "fotos_aprobadas.zip";
                 link.click();
-                
-                if (btnZipCliente) { btnZipCliente.innerText = "📦 Descargar Mis Aprobadas (.ZIP)"; btnZipCliente.disabled = false; }
-                if (btnZipFotografo) { btnZipFotografo.innerText = "Descargar Aprobadas (.ZIP)"; btnZipFotografo.disabled = false; }
+                btnZip.innerText = "Descargar Aprobadas (.ZIP)";
+                btnZip.disabled = false;
             });
         }
 
@@ -936,16 +826,12 @@
 
             if (vista === 'cliente') {
                 btnCliente.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md cursor-pointer";
-                if (btnFotografo) btnFotografo.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-1.5 cursor-pointer";
+                btnFotografo.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white flex items-center gap-1.5 cursor-pointer";
                 secCliente.classList.remove('hidden');
                 secFotografo.classList.add('hidden');
             } else {
-                if (usuarioActual && usuarioActual.rol !== 'admin') {
-                    alert("Acceso denegado: El panel de fotógrafo es exclusivo del administrador.");
-                    return;
-                }
                 btnCliente.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition text-neutral-400 hover:text-white cursor-pointer";
-                if (btnFotografo) btnFotografo.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md flex items-center gap-1.5 cursor-pointer";
+                btnFotografo.className = "px-2.5 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition bg-amber-500 text-neutral-950 shadow-md flex items-center gap-1.5 cursor-pointer";
                 secCliente.classList.add('hidden');
                 secFotografo.classList.remove('hidden');
             }
@@ -995,7 +881,7 @@
             let subidos = 0;
 
             contenedorProgreso.classList.remove('hidden');
-            dropText.innerText = `Subiendo fotos a carpeta "${carpetaActiva}"...`;
+            dropText.innerText = `Subiendo fotos a GitHub...`;
             
             for (let i = 0; i < totalArchivos; i++) {
                 const archivo = listaArchivos[i];
@@ -1008,8 +894,7 @@
                                 id: fotoId,
                                 nombre: resultado.nombre,
                                 url: resultado.url,
-                                estado: 'pendiente',
-                                carpeta: carpetaActiva
+                                estado: 'pendiente'
                             });
                         }
                     }
@@ -1028,7 +913,7 @@
                 contenedorProgreso.classList.add('hidden');
                 barraProgreso.style.width = '0%';
                 textoProgreso.innerText = '0% (0/0)';
-                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a la carpeta activa";
+                dropText.innerText = "Arrastra y suelta más fotos aquí para subir a GitHub";
             }, 1000);
 
             actualizarVistas();
