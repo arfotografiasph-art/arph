@@ -110,6 +110,7 @@
             <div id="galeria-cliente" class="responsive-grid"></div>
             <div id="cliente-vacio" class="text-center py-20 sm:py-28 text-neutral-500 space-y-2 hidden">
                 <p class="text-lg sm:text-xl font-medium">Cargando fotos desde Google Drive...</p>
+                <p class="text-xs text-neutral-600">Asegúrate de que la carpeta de Drive esté compartida públicamente.</p>
             </div>
         </section>
 
@@ -136,7 +137,7 @@
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base sm:text-lg font-semibold text-amber-400">Fotos Aprobadas por el Cliente</h2>
-                    <p class="text-xs sm:text-sm text-neutral-400 mt-0.5">Fotos seleccionadas listos para procesamiento final.</p>
+                    <p class="text-xs sm:text-sm text-neutral-400 mt-0.5">Fotos seleccionadas listas para procesamiento final.</p>
                 </div>
                 <button id="btn-descarga-zip" onclick="descargarTodoComoZip()" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-bold px-5 py-2.5 rounded-xl transition text-xs sm:text-sm shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0" disabled>
                     Descargar Aprobadas (.ZIP)
@@ -183,7 +184,7 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DE GOOGLE DRIVE INTEGRADA
+        // CONFIGURACIÓN DE GOOGLE DRIVE
         const DRIVE_FOLDER_ID = '1HXf4T3CcxpN9uf62BlA-iZmrM9swmwii'; 
         const DRIVE_API_KEY = 'AIzaSyBiSKGFbVBCNXRBgU6DBb88ILpfwwHb8rQ'; 
 
@@ -201,26 +202,53 @@
         let touchEndX = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            cargarUsuariosGuardados();
+            renderizarListaUsuarios();
             await cargarFotosGoogleDrive();
             configurarGestosModal();
         });
 
-        async function cargarFotosGoogleDrive() {
-            if (!DRIVE_FOLDER_ID || DRIVE_FOLDER_ID === 'TU_ID_DE_CARPETA_AQUI') {
-                console.warn("Recuerda configurar el ID de la carpeta de Drive.");
-                return;
+        function cargarUsuariosGuardados() {
+            const guardados = localStorage.getItem('USUARIOS_AR');
+            if (guardados) {
+                try { usuarios = JSON.parse(guardados); } catch(e){}
             }
+        }
 
-            const url = `https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+mimeType+contains+'image/'&fields=files(id,name)&key=${DRIVE_API_KEY}`;
+        function guardarUsuariosLocales() {
+            localStorage.setItem('USUARIOS_AR', JSON.stringify(usuarios));
+        }
+
+        async function cargarFotosGoogleDrive() {
+            const vistaVacia = document.getElementById('cliente-vacio');
+            vistaVacia.classList.remove('hidden');
+            vistaVacia.querySelector('p').innerText = "Cargando todas las fotos desde Google Drive...";
+
+            let allFiles = [];
+            let pageToken = '';
 
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Error en la solicitud a la API de Drive");
-                
-                const data = await response.json();
+                do {
+                    let url = `https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+mimeType+contains+'image/'&pageSize=1000&fields=nextPageToken,files(id,name)&key=${DRIVE_API_KEY}`;
+                    
+                    if (pageToken) {
+                        url += `&pageToken=${pageToken}`;
+                    }
 
-                if (data.files && data.files.length > 0) {
-                    catalogoFotos = data.files.map(archivo => {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Error en la solicitud al API de Drive");
+                    
+                    const data = await response.json();
+
+                    if (data.files) {
+                        allFiles = allFiles.concat(data.files);
+                    }
+
+                    pageToken = data.nextPageToken;
+                } while (pageToken);
+
+                if (allFiles.length > 0) {
+                    catalogoFotos = allFiles.map(archivo => {
                         return {
                             id: archivo.id,
                             nombre: archivo.name,
@@ -231,9 +259,12 @@
 
                     cargarEstadosLocales();
                     actualizarVistas();
+                } else {
+                    vistaVacia.querySelector('p').innerText = "No se encontraron imágenes en la carpeta de Drive.";
                 }
             } catch (error) {
                 console.error("Error al cargar fotos desde Google Drive:", error);
+                vistaVacia.querySelector('p').innerText = "Error al conectar con Google Drive. Verifica que la carpeta sea pública.";
             }
         }
 
@@ -344,6 +375,7 @@
             }
 
             usuarios.push({ user, pass, rol: 'cliente' });
+            guardarUsuariosLocales();
             
             document.getElementById('nuevo-user').value = '';
             document.getElementById('nuevo-pass').value = '';
@@ -356,12 +388,14 @@
 
             if (confirm(`¿Eliminar al cliente "${nombreUsuario}"?`)) {
                 usuarios = usuarios.filter(u => u.user !== nombreUsuario);
+                guardarUsuariosLocales();
                 renderizarListaUsuarios();
             }
         }
 
         function renderizarListaUsuarios() {
             const contenedor = document.getElementById('lista-usuarios');
+            if(!contenedor) return;
             contenedor.innerHTML = '';
             const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
 
@@ -388,7 +422,8 @@
         function actualizarVistas() {
             renderizarGaleriaCliente();
             renderizarPanelFotografo();
-            document.getElementById('contador-aprobadas').innerText = catalogoFotos.filter(f => f.estado === 'aprobada').length;
+            const contador = document.getElementById('contador-aprobadas');
+            if(contador) contador.innerText = catalogoFotos.filter(f => f.estado === 'aprobada').length;
         }
 
         function renderizarGaleriaCliente() {
